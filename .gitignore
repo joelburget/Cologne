@@ -1,0 +1,9 @@
+Cologne
+*.png
+*.o
+*.hi
+*.prof
+*.aux
+*.ps
+*.hp
+dist/*
