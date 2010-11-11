@@ -1,4 +1,20 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+
+{-
+ - Primitives:
+ -   Sphere
+ -   *Triangle
+ -   *Plane
+ -
+ - Rendering Methods:
+ -   Path Tracing
+ -   *Bidirectional Path Tracing
+ -   *#Metropolis
+ -   *Photon Mapping
+ -   *Adaptive Sampling
+ -   *Progressive Photon Mapping
+ -}
+
 module Main where
 
 import Control.Parallel.Strategies(parMap, rwhnf)
