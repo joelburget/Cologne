@@ -4,17 +4,34 @@
 module Vec (
     VecD(..)
   , VecI(..)
+  , ColorD
+  , ColorI
   , (|*|)
   , (|+|)
   , (|-|)
   , vecD2I
   , cross
   , dot
-  , line
   , norm
   , vmult
-  , Render.fmap
+  , Vec.fmap
+  , clamp
+  , toInt
   ) where
+
+import Data.Data
+import Data.Typeable
+
+{- We up toInt and clamp here even though they don't really fit in this module
+ - because of dependency issues -}
+
+toInt :: (Floating a, Ord a, RealFrac a, Integral b) => a -> b
+toInt x = truncate (((clamp x ** (1 / 2.2)) * 255) + 0.5)
+
+clamp :: (Num a, Ord a) => a -> a
+clamp x | x < 0 = 0
+        | x > 1 = 1
+        | otherwise = x
 
 {-
  - Here we define the basic vector types, VecD and VecI, representing a

@@ -1,14 +1,16 @@
 Name:             cologne
 Version:          0.0.1
 Description:      Nice smelling ray tracing
-License:          BSD
+License:          BSD3
 License-file:     LICENSE
 Author:           Joel Burget
 Maintainer:       joelburget@gmail.com
+Homepage:         http://programsthatsmellgood.com/cologne/
 Build-Type:       Simple
 Cabal-Version:    >=1.2
 
 Executable cologne
   Main-is:        Cologne.hs
+  Hs-Source-Dirs: src, src/primitives, src/accel
   Build-Depends:  base >= 3 && < 5, haskell98, mtl, gd, cmdargs, parallel
   ghc-options:    -funbox-strict-fields -ignore-package monads-fd

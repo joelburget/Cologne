@@ -4,8 +4,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Primitives (
-    Refl(..)
-  , Object(..)
+    Primitive(..)
   ) where
 
 import Control.Applicative
@@ -15,6 +14,8 @@ import Data.Data
 import Data.List
 import Data.Ord
 import Random
+
+import Vec
   
 data Ray = Ray {
     origin    :: !VecD
@@ -48,9 +49,14 @@ data Ray = Ray {
 --           deriving (Data, Typeable)
 
 data Intersection = Intersection {
-  dist   :: !Double,
-  object :: !Prim
+    dist   :: !Double
+  , object :: !Prim
   } | Miss
+
+data Bbox = Bbox {
+    start      :: !VecD
+  , dimensions :: !VecD
+  }
 
 class Primitive a where
   -- | Test for intersection between the ray and the primitive

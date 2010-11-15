@@ -8,8 +8,8 @@ data Sphere = Sphere {
   , color    :: Ray -> VecD
   } 
 
-intersect :: Ray -> Sphere -> Maybe Double
-intersect(Ray o d) s | det < 0 = Nothing
+sphereIntersect :: Ray -> Sphere -> Maybe Double
+sphereIntersect(Ray o d) s | det < 0 = Nothing
                             | t > eps = Just t
                             | t' > eps = Just t'
                             | otherwise = Nothing
@@ -21,4 +21,10 @@ intersect(Ray o d) s | det < 0 = Nothing
                                   t = b - det'
                                   t' = b + det'
 
+sphereBound :: Sphere -> Bbox
+sphereBound s = Bbox (Vec.fmap (-(radius s)) (position s)) (VecD 2*(radius s) 2*(radius) 2*(radius))
+
 instance Primitive Sphere where
+  intersect = sphereIntersect
+  bound = sphereBound
+  color = undefined

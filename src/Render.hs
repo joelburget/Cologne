@@ -1,22 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
 module Render (
     Context(..)
-  , Refl(..)
-  , Object(..)
-  , VecD(..)
-  , VecI(..)
-  , (|*|)
-  , (|+|)
-  , (|-|)
-  , vecD2I
-  , clamp
-  , toInt
-  , cross
-  , dot
   , line
-  , norm
-  , vmult
-  , Render.fmap
   ) where
 
 import Control.Applicative
@@ -26,45 +11,23 @@ import Data.Data
 import Data.List
 import Data.Ord
 import Random
+
+import Vec
+import Primitives
   
 data Ray = Ray {
-    origin    :: VecD
-  , direction :: VecD
+    origin    :: !VecD
+  , direction :: !VecD
   }
-
-{-
- - Here we consider three different types of interaction between ray and
- - surface:
- -
- - Diffusion: This is when the rays coming into an object are sent off in
- - random directions. Think matte paint. A potential issue here is that the
- - outbound rays are, to us, random. Thus we may wish to pass around a
- - pseudo-random number generator, perhaps in the state.
- -
- - Specular Reflection: This is what we typically think of as reflection, where
- - a ray comes into a surface and exits at the same angle, think of a mirror.
- -
- - Refraction: Refraction is the change in direction of a wave due to a change
- - in its speed. Think of a straw appearing to change direction in water.
- -
- - Refraction is governed by Snell's law: sin(theta_1) / sin(theta_2) = n_1 /
- - n_2 where theta is the angle from the normal of the boundary of the surface
- - and n is the index of refraction of the material.
- -}
-
-data Refl = DIFF -- ^ Diffuse
-          | SPEC -- ^ Specular
-          | REFR -- ^ Refraction
-          deriving (Data, Typeable)
 
 maybeMinimumBy :: (a -> a -> Ordering) -> [a] -> Maybe a
 maybeMinimumBy _ [] = Nothing
 maybeMinimumBy f l = Just (minimumBy f l)
 
-intersectScene :: [Object] -> Ray -> Maybe (Object, Double)
+intersectScene :: [Primitive] -> Ray -> Maybe (Primitive, Double)
 intersectScene scene r = maybeMinimumBy (comparing snd) [(s, t) | (s, Just t) <- map ((,) <*> intersectSphere r) scene]
 
-radiance' :: (RandomGen g) => [Object] -> Ray -> Int -> Object -> Double -> State g VecD
+radiance' :: (RandomGen g) => [Primitive] -> Ray -> Int -> Primitive -> Double -> State g VecD
 radiance' scene r depth obj t | depth >= 5 = return (emission obj) --R.R.
                               | otherwise = do p' <- State (randomR (0, 1))
                                                if p' >= p
@@ -117,7 +80,7 @@ radiance' scene r depth obj t | depth >= 5 = return (emission obj) --R.R.
                                                        rp = re / p
                                                        tp = tr / (1 - pp)
 
-radiance :: (RandomGen g) => [Object] -> Ray -> Int -> State g VecD
+radiance :: (RandomGen g) => [Primitive] -> Ray -> Int -> State g VecD
 radiance scene r depth | Just (obj, t) <- intersectScene scene r = radiance' scene r depth obj t
                        | otherwise = return (VecD 0 0 0)
 
@@ -129,16 +92,8 @@ data Context = Context {
   , ctxcy :: VecD           -- ^ Change in y Direction per pixel
   , ctxcamdir :: VecD       -- ^ Camera Direction
   , ctxcampos :: VecD       -- ^ Camera Position
-  , ctxscene :: [Object]    -- ^ Scene Objects
+  , ctxscene :: [Primitive]    -- ^ Scene Primitive
   } deriving (Data, Typeable)
-
-toInt :: (Floating a, Ord a, RealFrac a, Integral b) => a -> b
-toInt x = truncate (((clamp x ** (1 / 2.2)) * 255) + 0.5)
-
-clamp :: (Num a, Ord a) => a -> a
-clamp x | x < 0 = 0
-        | x > 1 = 1
-        | otherwise = x
 
 -- Given the context render line number y
 line :: Context -> Int -> [VecD]
