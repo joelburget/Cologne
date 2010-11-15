@@ -13,6 +13,13 @@
  -   *Photon Mapping
  -   *Adaptive Sampling
  -   *Progressive Photon Mapping
+ -
+ - Acceleration Structures
+ -   *kd-tree
+ -   *bih
+ -   *bvh
+ -
+ - * - Not yest implemented
  -}
 
 module Main where
