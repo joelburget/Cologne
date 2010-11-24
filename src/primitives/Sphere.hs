@@ -3,13 +3,13 @@
 module Sphere where
 
 data Sphere = Sphere { 
-    radius   :: !Double
-  , position :: !VecD
-  , color    :: Ray -> VecD
+    sphereRadius   :: !Double
+  , spherePosition :: !VecD
+  , sphereColor    :: Ray -> Int -> Int -> VecD
   } 
 
 sphereIntersect :: Ray -> Sphere -> Maybe Double
-sphereIntersect(Ray o d) s | det < 0 = Nothing
+sphereIntersect (Ray o d) s | det < 0 = Nothing
                             | t > eps = Just t
                             | t' > eps = Just t'
                             | otherwise = Nothing
@@ -22,9 +22,12 @@ sphereIntersect(Ray o d) s | det < 0 = Nothing
                                   t' = b + det'
 
 sphereBound :: Sphere -> Bbox
-sphereBound s = Bbox (Vec.fmap (-(radius s)) (position s)) (VecD 2*(radius s) 2*(radius) 2*(radius))
+sphereBound s = Bbox 
+                  (Vec.fmap (-(radius s)) (position s)) 
+                  (VecD 2*(radius s) 2*(radius) 2*(radius))
 
 instance Primitive Sphere where
   intersect = sphereIntersect
   bound = sphereBound
-  color = undefined
+  color sph ray 0 _ = Vec 0 0 0
+  color sph ray depth rand = (sphereColor sph) ray depth rand

@@ -10,3 +10,5 @@ class AccelStruct a where
   insert            :: Primitive -> a -> a
   intersect         :: Ray -> a -> Intersection
   listToAccelStruct :: [Primitive] -> a
+
+data Accel = forall a. AccelStruct a => Accel a

@@ -62,6 +62,13 @@ class Primitive a where
   -- | Test for intersection between the ray and the primitive
   intersect :: a -> Ray -> Intersection
   bound :: a -> Bbox
-  color :: a -> Ray -> ColorD
+  -- color takes the object, the incoming ray, the recursive depth, and a random number
+  color :: a -> Ray -> Int -> Int -> ColorD
 
+-- TODO: check if newtype performs better here
 data Prim = forall a. Primitive a => Prim a
+
+instance Primitive Prim where
+  intersect (Prim a) !ray = intersect a ray
+  bound (Prim a) !ray !depth = bound a ray depth
+  color (Prim a) !ray !depth !rand = color ray depth rand
