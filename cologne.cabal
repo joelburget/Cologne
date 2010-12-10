@@ -10,7 +10,8 @@ Build-Type:       Simple
 Cabal-Version:    >=1.2
 
 Executable cologne
-  Main-is:        Cologne.hs
-  Hs-Source-Dirs: src, src/primitives, src/accel
+  Main-Is:        Cologne.hs
+  Other-Modules:  Cologne.Render Cologne.Vec Cologne.Primitives.Primitives Cologne.Primitives.Sphere Cologne.Primitives.Triangle Cologne.Accel.AccelStruct Cologne.Accel.List
+  -- Hs-Source-Dirs: Cologne, Cologne/Primitives, Cologne/Accel
   Build-Depends:  base >= 3 && < 5, haskell98, mtl, gd, cmdargs, parallel
   ghc-options:    -funbox-strict-fields -ignore-package monads-fd

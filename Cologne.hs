@@ -19,7 +19,7 @@
  -   *bih
  -   *bvh
  -
- - * - Not yest implemented
+ - * - Not yet implemented
  -}
 
 module Main where
@@ -30,7 +30,7 @@ import System.Console.CmdArgs
 import Graphics.GD
 import System.IO
 
-import Render
+import Cologne.Render
 
 spheres :: [Object]
 spheres = [Sphere { radius = 1e5,  position = VecD (1+1e5) 40.8 81.6,    emission = VecD 0 0 0,    color = VecD 0.75 0.25 0.25,  refl = DIFF},--Left
@@ -51,6 +51,23 @@ context w h samp scene =
           cx = VecD (0.5135 * fromIntegral w / fromIntegral h) 0 0
           cy = norm (cx `cross` camdir) |*| 0.5135
 
+saveImage :: [[VecD]] -> Image -> FilePath -> IO ()
+saveImage picture image name = do
+  mapM_ (\a -> setLinePixels a) (zip picture [0..])
+  savePngFile name image
+  where
+    setOnePixel y x v = let VecI r g b = vecD2I v in setPixel (x, y) (rgb r g b) image
+    setLinePixels (l, y) = zipWithM_ (setOnePixel y) [0..] l
+
+tell :: Int -> Int -> IO ()
+tell x len = hPutStr stderr ("\r" ++ show ((fromInteger . toInteger) x * 100 / 
+           (fromInteger . toInteger) len) ++ "%       ")
+
+generatePicture :: (Int -> Int -> VecD) -> Int -> Int -> [[VecD]]
+generatePicture color height width =
+  [line y | y <- [1..height]]
+    where line y = [color x y | x <- [1..width]]
+
 data Options = Options {
     width   :: Int
   , height  :: Int
@@ -60,7 +77,7 @@ data Options = Options {
 options = cmdArgsMode $ Options {
     width   = 100 &= name "x" &= help "Width of image"
   , height  = 100 &= name "y" &= help "Height of image"
-  , samples = 100 &= help "Samples"
+  , samples = 100 &= help "Samples per pixel"
   } &= summary "Cologne Ray Tracer"
 
 main :: IO ()
@@ -69,13 +86,8 @@ main = do
   let x = width opts
       y = height opts
       s = samples opts
+      output = "image.png"
+      -- color is the ray tracing function, to be defined
+      picture = generatePicture color xs ys
   image <- newImage (x,y)
-  let output = "image.png"
-      ctx = (context x y s spheres)
-      colors = parMap rwhnf (line ctx) [1..y]
-      setOnePixel y x v = let VecI r g b = vecD2I v in setPixel (x, y) (rgb r g b) image
-      setLinePixels (l, y) = zipWithM_ (setOnePixel y) [0..] l
-  -- here we have to use stderr (as far as I know) so we can output the progress
-  mapM_ (\a -> setLinePixels a >> hPutStr stderr ("\r" ++ show ((fromInteger . toInteger) ((snd a + 1) * 100) / (fromInteger . toInteger) y) ++ "%"))
-    (zip colors [0..])
-  savePngFile output image
+  saveImage picture image output 
