@@ -34,9 +34,10 @@ import Cologne.Vec
 import Cologne.Primitives.Primitives
 import Cologne.Primitives.Sphere
 import Cologne.Accel.AccelStruct
+import Cologne.Accel.List
 import Cologne.Render
 
-scene :: Accel
+scene :: [Prim]
 scene = listToAccelStruct
           [  Prim $ Sphere 1e5  (VecD (1+1e5) 40.8 81.6)    (\r i j -> VecD 0.75 0.25 0.25)
           ,  Prim $ Sphere 1e5  (VecD (99-1e5) 40.8 81.6)   (\r i j -> VecD 0.25 0.25 0.75) --Rght
@@ -49,7 +50,7 @@ scene = listToAccelStruct
           ,  Prim $ Sphere 600  (VecD 50 (681.6-0.27) 81.6) (\r i j -> VecD 0 0 0)           --Lite
           ]
 
-context :: Int -> Int -> Int -> Accel -> Context
+context :: (AccelStruct a) => Int -> Int -> Int -> a -> Context a
 context w h samp scene = 
   Context {ctxw = w, ctxh = h, ctxsamp = samp, ctxcx = cx, ctxcy = cy, 
   ctxcampos = VecD 50 52 295.6, ctxcamdir = camdir, ctxscene = scene}
@@ -70,8 +71,9 @@ tell :: Int -> Int -> IO ()
 tell x len = hPutStr stderr ("\r" ++ show ((fromInteger . toInteger) x * 100 / 
            (fromInteger . toInteger) len) ++ "%       ")
 
-generatePicture :: (Accel -> Ray -> Int -> Int -> ColorD) 
-                -> Context 
+generatePicture :: (AccelStruct a) =>
+                   (a -> Ray -> Int -> Int -> ColorD) 
+                -> Context a
                 -> Int
                 -> [[ColorD]]
 generatePicture color context rand =
