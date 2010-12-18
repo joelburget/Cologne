@@ -5,7 +5,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 --{-# LANGUAGE TypeSynonymInstances #-}
 
-module Cologne.Primitives.Primitives (
+module Cologne.Primitives (
     Primitive
   , color
   , intersect
@@ -14,13 +14,13 @@ module Cologne.Primitives.Primitives (
   , Bbox(..)
   , Intersection(..)
   , Ray(..)
+  , AccelStruct(..)
+  , Accel(..)
   ) where
 
 import Control.Applicative
 import Control.Monad.State
-import Data.Typeable
-import Data.Data
-import Data.List hiding (intersect)
+import Data.List hiding (intersect, insert)
 import Data.Ord
 import Random
 
@@ -51,12 +51,6 @@ data Ray = Ray {
  - and n is the index of refraction of the material.
  -}
 
--- This should no longer be necessary
--- data Refl = DIFF -- ^ Diffuse
---           | SPEC -- ^ Specular
---           | REFR -- ^ Refraction
---           deriving (Data, Typeable)
-
 data Intersection = Intersection {
     dist   :: !Double
   , object :: !Prim
@@ -67,6 +61,15 @@ data Bbox = Bbox {
   , dimensions :: !VecD
   }
 
+{- There is a relevant post here
+ - http://lukepalmer.wordpress.com/2010/01/24/haskell-antipattern-existential-typeclass/
+ - that discusses whether it would be better to just use something like 
+ - > data Primitive
+ -
+ - I would like to test this out in the future. (Be sure to read the comments
+ - too, it looks like there's good discussion there.
+ -}
+
 class Primitive a where
   -- | Test for intersection between the ray and the primitive
   intersect :: a -> Ray -> Intersection
@@ -74,12 +77,24 @@ class Primitive a where
   -- be as small as possible
   bound     :: a -> Bbox
   -- color takes the object, the incoming ray, the recursive depth, and a random number
-  color     :: a -> Ray -> Int -> Int -> ColorD
+  color     :: forall b. (AccelStruct b) => a -> b -> Ray -> Double -> Int -> Int -> ColorD
 
 -- TODO: check if newtype performs better here
 data Prim = forall a. Primitive a => Prim a
 
 instance Primitive Prim where
-  intersect (Prim a) !ray          = intersect a ray
-  bound (Prim a)                   = bound a
-  color (Prim a) !ray !depth !rand = color a ray depth rand
+  intersect (Prim a) !ray                      = intersect a ray
+  bound (Prim a)                               = bound a
+  color (Prim a) !accel !ray !len !depth !rand = color a accel ray len depth rand
+
+class AccelStruct a where
+  insert            :: Prim -> a -> a
+  aIntersect        :: a -> Ray -> Intersection
+  listToAccelStruct :: [Prim] -> a
+
+data Accel = forall a. AccelStruct a => Accel a
+
+instance AccelStruct Accel where
+  insert prim (Accel a)    = insert prim (Accel a)
+  aIntersect (Accel a) ray = aIntersect a ray
+  listToAccelStruct lst    = listToAccelStruct lst

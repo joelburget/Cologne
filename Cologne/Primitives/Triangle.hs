@@ -3,7 +3,7 @@
 module Cologne.Primitives.Triangle where
 
 import Cologne.Vec
-import Cologne.Primitives.Primitives
+import Cologne.Primitives
 
 data Triangle = Triangle !Int !Int !Int (Ray -> ColorD) deriving (Data, Typeable)
 

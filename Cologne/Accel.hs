@@ -5,15 +5,17 @@
  - in a scene (O(n)) we can reduce the complexity to O(lg(n)).
  -}
 
-module Cologne.Accel.AccelStruct where
+module Cologne.Accel where
 
-import Cologne.Primitives.Primitives hiding (intersect)
---import Cologne.Primitives.Primitives as P
+import Cologne.Primitives hiding (intersect)
 
-class AccelStruct a where
-  insert            :: Prim -> a -> a
-  intersect         :: a -> Ray -> Intersection
-  listToAccelStruct :: [Prim] -> a
+--I had to move this to the primitives module because they were mutually
+--dependent...
+
+--class AccelStruct a where
+--  insert            :: Prim -> a -> a
+--  intersect         :: a -> Ray -> Intersection
+--  listToAccelStruct :: [Prim] -> a
 
 -- data Accel = forall a. AccelStruct a => Accel a
 -- 

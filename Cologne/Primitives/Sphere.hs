@@ -1,16 +1,17 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Cologne.Primitives.Sphere where
 
 import Cologne.Vec
 import Cologne.Vec as Vec
-import Cologne.Primitives.Primitives
+import Cologne.Primitives
 
 data Sphere = Sphere { 
     sphereRadius   :: !Double
   , spherePosition :: !VecD
-  , sphereColor    :: Ray -> Int -> Int -> VecD
+  , sphereColor    :: forall a. (AccelStruct a) => a -> Ray -> Double -> Int -> Int -> ColorD
   } 
 
 sphereIntersect :: Sphere -> Ray -> Intersection
@@ -23,10 +24,11 @@ sphereIntersect' s (Ray o d) | det < 0 = Nothing
                              | t > eps = Just t
                              | t' > eps = Just t'
                              | otherwise = Nothing
-                             where op = spherePosition s |-| o -- Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+                             where op = spherePosition s |-| o 
                                    eps = 1e-4
                                    b = op `dot` d
-                                   det = (b * b) - (op `dot` op) + (sphereRadius s * sphereRadius s)
+                                   det = (b * b) - (op `dot` op) + 
+                                     (sphereRadius s * sphereRadius s)
                                    det' = sqrt det
                                    t = b - det'
                                    t' = b + det'
@@ -39,5 +41,4 @@ sphereBound s = Bbox
 instance Primitive Sphere where
   intersect = sphereIntersect
   bound = sphereBound
-  color sph ray 0 _ = VecD 0 0 0
-  color sph ray depth rand = (sphereColor sph) ray depth rand
+  color sph accel ray len depth rand = (sphereColor sph) accel ray len depth rand
