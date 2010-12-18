@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TypeOperators #-}
 
 {-
  - Primitives:
@@ -54,7 +53,7 @@ scene = listToAccelStruct
   ,  sphr 1e5  (VecD 50 40.8 (170-1e5)) (VecD 0 0 0) (VecD 0 0 0) Diffuse
   ,  sphr 1e5  (VecD 50 1e5 81.6) (VecD 0.75 0.75 0.75) (VecD 0 0 0) Diffuse
   ,  sphr 1e5  (VecD 50 (81.6-1e5) 81.6) (VecD 0.75 0.75 0.75) (VecD 0 0 0) Diffuse
-  ,  sphr 16.5  (VecD 27 16.5 47) (VecD 0.999 0.999 0.999) (VecD 0 0 0) Specular
+  ,  sphr 16.5 (VecD 27 16.5 47) (VecD 0.999 0.999 0.999) (VecD 0 0 0) Specular
   ,  sphr 16.5 (VecD 73 16.5 78) (VecD 0.999 0.999 0.999) (VecD 0 0 0) Refractive
   ,  sphr 600  (VecD 50 (681.6-0.27) 81.6) (VecD 0 0 0) (VecD 12 12 12) Diffuse
   ]
@@ -98,12 +97,20 @@ generatePicture color context rand =
           , ctxcampos = campos
           , ctxscene = scene
           } = context
-          color' x y = avgColor [color (ctxscene context) ray 0 ((rand * 2713 * x * y * s) `mod` 7919) | s <- [1..samp]]
+          color' x y = 
+            avgColor [color (ctxscene context) 
+                            ray 
+                            0  -- The depth we start from
+                            ((rand * 2713 * x * y * s) `mod` 7919) -- Make this
+                            -- number as random as possible, without using the 
+                            -- State monad, which is where I'm going next
+                              | s <- [1..samp]]
             where
               d =   (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
                 |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
                 |+| camdir
               ray = Ray (campos |+| (d |*| 140.0)) (norm d)
+              -- TODO: make a specialized avgColor function
               avgColor xs = VecD (avg (map (dot (VecD 1 0 0)) xs))
                                  (avg (map (dot (VecD 0 1 0)) xs))
                                  (avg (map (dot (VecD 0 0 1)) xs))
@@ -142,7 +149,6 @@ main = do
       , ctxcamdir = camdir
       , ctxscene = scene 
       }
-      -- replace 0 with a random number later
       picture = generatePicture radiance context 19
   image <- newImage (w,h)
   saveImage picture image output 

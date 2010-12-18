@@ -77,7 +77,7 @@ class Primitive a where
   -- be as small as possible
   bound     :: a -> Bbox
   -- color takes the object, the incoming ray, the recursive depth, and a random number
-  color     :: forall b. (AccelStruct b) => a -> b -> Ray -> Double -> Int -> Int -> ColorD
+  color     :: (AccelStruct b) => a -> b -> Ray -> Double -> Int -> Int -> ColorD
 
 -- TODO: check if newtype performs better here
 data Prim = forall a. Primitive a => Prim a

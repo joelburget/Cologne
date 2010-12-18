@@ -11,7 +11,7 @@ import Cologne.Primitives
 data Sphere = Sphere { 
     sphereRadius   :: !Double
   , spherePosition :: !VecD
-  , sphereColor    :: forall a. (AccelStruct a) => a -> Ray -> Double -> Int -> Int -> ColorD
+  , sphereColor    :: (AccelStruct a) => a -> Ray -> Double -> Int -> Int -> ColorD
   } 
 
 sphereIntersect :: Sphere -> Ray -> Intersection
