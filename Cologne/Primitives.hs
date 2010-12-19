@@ -3,7 +3,6 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
---{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cologne.Primitives (
     Primitive

@@ -15,10 +15,15 @@ import Cologne.Accel
 
 data ReflectionType = Diffuse | Specular | Refractive
 
--- We may need two radiance functions, one to give the radiance returned at the
--- intersection of an object and another to give the radiance of a ray shot
--- into the scene
+-- We have two radiance functions, one to give the radiance returned at the
+-- intersection of an object (objRadiance) and another to give the radiance of
+-- a ray shot into the scene (radiance).
 
+-- To compute the radiance of a ray shot into the scene we check to see if the
+-- ray intersects an object. If it misses all objects we return black, if it
+-- hits, we return the color returned by the object for that particular ray.
+-- Note that 'color' is the funtion required by the Primitive typeclass, in
+-- this case it would be objRadiance partially applied.
 radiance :: (AccelStruct a) => a -> Ray -> Int -> Int -> ColorD
 radiance scene r depth rand 
   | Intersection t obj <- aIntersect scene r = color obj scene r t depth rand
@@ -28,6 +33,8 @@ radiance scene r depth rand
 -- giving the resulting function to an object, to be its radiance function.
 -- This is a rewritten copy of the radiance function from smallpt-haskell:
 -- http://www.partario.com/blog/2010/03/a-render-farm-in-haskell.html
+-- which is, in turn, a rewrite of the original smallpt:
+-- http://kevinbeason.com/smallpt/
 objRadiance :: ({-Primitive pr, -}AccelStruct a) =>
                ColorD ->                 -- The color of the object
                ColorD ->                 -- Its emission
@@ -39,7 +46,7 @@ objRadiance color emission refl normal scene ray t depth rand
   | depth >= 5 = emission
   | otherwise = if r2 >= p
     then emission
-    else emission |+| f `vmult` reflect refl
+    else emission |+| (f `vmult` reflect refl)
       where
         f = color |*| (1.0 / p)
         Ray raypos raydir = ray
@@ -48,9 +55,9 @@ objRadiance color emission refl normal scene ray t depth rand
         nl | (n `dot` raydir) < 0 = n
            | otherwise = n |*| (-1)
         p = let VecD fx fy fz = color in maximum [fx, fy, fz]
-        r2 = fst $ randomR (0, 1) sGen --(fst . next . snd . next) sGen
-        reflRay = Ray x (raydir |-| (n |*| (2 * (n `dot` raydir))))
         sGen = mkStdGen rand
+        r2 = fst $ randomR (0, 1.0) ((snd . next) sGen) --(fst . next . snd . next) sGen
+        reflRay = Ray x (raydir |-| (n |*| (2 * (n `dot` raydir))))
         nextRand = (fst . next) sGen
         reflect Diffuse =
           let
@@ -60,9 +67,10 @@ objRadiance color emission refl normal scene ray t depth rand
               | otherwise = norm $ VecD 1 0 0 `cross` w
             v = w `cross` u
             r1 = fst $ randomR (0, 2*pi) sGen --(fst . next) sGen
+            -- see above for r2
             r2s = sqrt r2
-            d = norm ((u |*| (cos r1 * r2s))
-                  |+| (v |*| (sin r1 * r2s))
+            d = norm ((u |*| ((cos r1) * r2s))
+                  |+| (v |*| ((sin r1) * r2s))
                   |+| (w |*| sqrt (1 - r2)))
           in
             radiance scene (Ray x d) (depth + 1) nextRand
@@ -70,7 +78,7 @@ objRadiance color emission refl normal scene ray t depth rand
         reflect Refractive
           | cos2t < 0 = radiance scene reflRay (depth + 1) nextRand
           | depth >= 2 =
-            let pp' = fst $ randomR (0, 1) sGen
+            let pp' = r2
             in if pp' < pp
                then (radiance scene reflRay (depth + 1) nextRand) |*| rp 
                else (radiance scene (Ray x tdir) (depth + 1) nextRand) |*| tp 
@@ -86,7 +94,7 @@ objRadiance color emission refl normal scene ray t depth rand
             nnt | into = nc / nt
                 | otherwise = nt / nc
             ddn = raydir `dot` nl
-            cos2t = 1 - nnt * nnt * 1 - ddn * ddn
+            cos2t = 1 - (nnt * nnt * (1 - (ddn * ddn)))
             tdir = norm ((raydir |*| nnt) |-|
               (n |*| ((if into then 1 else (-1)) * (ddn * nnt + sqrt cos2t))))
             a = nt - nc
@@ -96,6 +104,6 @@ objRadiance color emission refl normal scene ray t depth rand
               | otherwise = 1 - tdir `dot` n
             re = r0 + ((1 - r0) * c * c * c * c * c)
             tr = 1 - re
-            pp = 0.25 +(0.5 * re)
+            pp = 0.25 + (0.5 * re)
             rp = re / p
             tp = tr / (1 - pp)
