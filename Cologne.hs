@@ -38,7 +38,7 @@ import Cologne.Primitives.Sphere
 import Cologne.Accel
 import Cologne.Accel.List
 import Cologne.Render
-import Cologne.Shaders
+import Cologne.Shaders.Smallpt
 
 sphr :: Double -> VecD -> ColorD -> ColorD -> ReflectionType -> Prim
 sphr radius center emission color eType =

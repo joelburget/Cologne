@@ -1,4 +1,4 @@
-module Cologne.Shaders (
+module Cologne.Shaders.Smallpt (
     ReflectionType(..)
   , radiance
   , objRadiance
