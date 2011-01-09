@@ -1,20 +1,21 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Cologne.Primitives (
-    Primitive
-  , color
+    Primitive(Primitive)
   , intersect
   , bound
-  , Prim(..)
+  , normal
+  , colorInfo
   , Bbox(..)
   , Intersection(..)
   , Ray(..)
   , AccelStruct(..)
-  , Accel(..)
   ) where
 
 import Control.Applicative
@@ -50,9 +51,10 @@ data Ray = Ray {
  - and n is the index of refraction of the material.
  -}
 
-data Intersection = Intersection {
-    dist   :: !Double
-  , object :: !Prim
+data Intersection a = Intersection {
+    dist    :: !Double
+  , info    :: !a
+  , iNormal :: !VecD
   } | Miss
 
 data Bbox = Bbox {
@@ -60,40 +62,34 @@ data Bbox = Bbox {
   , dimensions :: !VecD
   }
 
-{- There is a relevant post here
- - http://lukepalmer.wordpress.com/2010/01/24/haskell-antipattern-existential-typeclass/
- - that discusses whether it would be better to just use something like 
- - > data Primitive
- -
- - I would like to test this out in the future. (Be sure to read the comments
- - too, it looks like there's good discussion there.
- -}
+data Primitive a = Primitive {
 
-class Primitive a where
   -- | Test for intersection between the ray and the primitive
-  intersect :: a -> Ray -> Intersection
-  -- bound returns an axis-aligned bounding box around the object, it should 
+    intersect :: Ray -> Maybe Double
+
+  -- bound returns an axis-aligned bounding box around the object, it should
   -- be as small as possible
-  bound     :: a -> Bbox
-  -- color takes the object, the incoming ray, the recursive depth, and a random number
-  color     :: (AccelStruct b) => a -> b -> Ray -> Double -> Int -> Int -> ColorD
+  , bound     :: Bbox
 
--- TODO: check if newtype performs better here
-data Prim = forall a. Primitive a => Prim a
+  -- Return the normal vector at any point on the surface
+  , normal    :: VecD -> VecD
+    
+  -- Do your color stuff however you want, for instance if you're feeling
+  -- really haskell-ish, you may like each object to have a function that you
+  -- can call, thus b will be a function ((AccelStruct s) => s -> Ray ->
+  -- Double -> Int -> Int -> ColorD) taking the scene, incoming ray,
+  -- recursive depth, and a random number. This function would then be called
+  -- by the radiance function. This approach gives a lot of flexibilitiy. On
+  -- the other hand it is probably more efficient for b to be a tuple (VecD,
+  -- VecD, ReflectionType) containing the color, emission, and whether the
+  -- surface is diffuse, refractive, or specular. Then the logic would be
+  -- shifted from the object to the radiance function.
+  , colorInfo :: a
+  }
 
-instance Primitive Prim where
-  intersect (Prim a) !ray                      = intersect a ray
-  bound (Prim a)                               = bound a
-  color (Prim a) !accel !ray !len !depth !rand = color a accel ray len depth rand
-
-class AccelStruct a where
-  insert            :: Prim -> a -> a
-  aIntersect        :: a -> Ray -> Intersection
-  listToAccelStruct :: [Prim] -> a
-
-data Accel = forall a. AccelStruct a => Accel a
-
-instance AccelStruct Accel where
-  insert prim (Accel a)    = insert prim (Accel a)
-  aIntersect (Accel a) ray = aIntersect a ray
-  listToAccelStruct lst    = listToAccelStruct lst
+-- a: The accel struct type
+-- b: The info type
+class AccelStruct a b | a -> b where
+  insert            :: Primitive b -> a -> a
+  aIntersect        :: a -> Ray -> Intersection b
+  listToAccelStruct :: [Primitive b] -> a

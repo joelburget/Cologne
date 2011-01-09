@@ -12,7 +12,7 @@ import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
 import Cologne.Accel
   
-data (AccelStruct a) => Context a = Context { 
+data (AccelStruct a b) => Context a b = Context { 
     ctxw      :: !Int        -- ^ Width in Pixels
   , ctxh      :: !Int        -- ^ Height in Pixels
   , ctxsamp   :: !Int        -- ^ Samples to take?

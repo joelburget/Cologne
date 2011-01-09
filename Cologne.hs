@@ -26,8 +26,8 @@
 module Main where
 
 import Control.Parallel.Strategies(parMap, rwhnf)
---import Control.Monad.State
 import Control.Monad
+import Control.Monad.State
 import System.Console.CmdArgs
 import Graphics.GD
 import System.IO
@@ -40,12 +40,7 @@ import Cologne.Accel.List
 import Cologne.Render
 import Cologne.Shaders.Smallpt
 
-sphr :: Double -> VecD -> ColorD -> ColorD -> ReflectionType -> Prim
-sphr radius center emission color eType =
-  Prim $ Sphere radius center
-           (objRadiance color emission eType (\v -> norm (v |-| center)))
-
---{- vista
+{- vista
 cen = VecD 50 (-20) (-860)
 
 scene :: [Prim]
@@ -106,18 +101,18 @@ scene = listToAccelStruct
  ]
 --}
 
-{- cornell box
-scene :: [Prim]
+--{- cornell box for smallpt
+scene :: [Primitive (VecD, VecD, ReflectionType)] -- (color, emission, reflectiontype)
 scene = listToAccelStruct
-  [  sphr 1e5  (VecD (1+1e5) 40.8 81.6) (VecD 0.75 0.25 0.25) (VecD 0 0 0) Diffuse
-  ,  sphr 1e5  (VecD (99-1e5) 40.8 81.6) (VecD 0.25 0.25 0.75) (VecD 0 0 0) Diffuse
-  ,  sphr 1e5  (VecD 50 40.8 1e5) (VecD 0.75 0.75 0.75) (VecD 0 0 0) Diffuse
-  ,  sphr 1e5  (VecD 50 40.8 (170-1e5)) (VecD 0 0 0) (VecD 0 0 0) Diffuse
-  ,  sphr 1e5  (VecD 50 1e5 81.6) (VecD 0.75 0.75 0.75) (VecD 0 0 0) Diffuse
-  ,  sphr 1e5  (VecD 50 (81.6-1e5) 81.6) (VecD 0.75 0.75 0.75) (VecD 0 0 0) Diffuse
-  ,  sphr 16.5 (VecD 27 16.5 47) (VecD 0.999 0.999 0.999) (VecD 0 0 0) Specular
-  ,  sphr 16.5 (VecD 73 16.5 78) (VecD 0.999 0.999 0.999) (VecD 0 0 0) Refractive
-  ,  sphr 600  (VecD 50 (681.6-0.27) 81.6) (VecD 0 0 0) (VecD 12 12 12) Diffuse
+  [  sphere (VecD (1+1e5) 40.8 81.6) 1e5 ((VecD 0.75 0.25 0.25), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD (99-1e5) 40.8 81.6) 1e5 ((VecD 0.25 0.25 0.75), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD 50 40.8 1e5) 1e5 ((VecD 0.75 0.75 0.75), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD 50 40.8 (170-1e5)) 1e5 ((VecD 0 0 0), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD 50 1e5 81.6) 1e5 ((VecD 0.75 0.75 0.75), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD 50 (81.6-1e5) 81.6) 1e5 ((VecD 0.75 0.75 0.75), (VecD 0 0 0), Diffuse)
+  ,  sphere (VecD 27 16.5 47) 16.5 ((VecD 0.999 0.999 0.999), (VecD 0 0 0), Specular)
+  ,  sphere (VecD 73 16.5 78) 16.5 ((VecD 0.999 0.999 0.999), (VecD 0 0 0), Refractive)
+  ,  sphere (VecD 50 (681.6-0.27) 81.6) 600 ((VecD 0 0 0), (VecD 12 12 12), Diffuse)
   ]
 --}
 
@@ -135,44 +130,78 @@ tell :: Int -> Int -> IO ()
 tell x len = hPutStr stderr ("\r" ++ show ((fromInteger . toInteger) (x+1) * 100 / 
            (fromInteger . toInteger) len) ++ "%       ")
 
-generatePicture :: (AccelStruct a) =>
-                   (a -> Ray -> Int -> Int -> ColorD) 
-                -> Context a
-                -> Int
-                -> [[ColorD]]
-generatePicture color context rand =
-  [line y | y <- [h,h-1..1]]
-    where line y = [color' x y | x <- [1..w]]
-          Context { 
-            ctxw = w 
-          , ctxh = h
-          , ctxsamp = samp
-          , ctxcx = cx
-          , ctxcy = cy
-          , ctxcamdir = camdir
-          , ctxcampos = campos
-          , ctxscene = scene
-          } = context
-          color' x y = 
-            avgColor [color (ctxscene context) 
-                            ray 
-                            0  -- The depth we start from
-                            (rand * 2713 * x * y * s) -- Make this
-                            -- number as random as possible, without using the 
-                            -- State monad, which is where I'm going next (TODO)
-                              | s <- [1..samp]]
-            where
-              d =   (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
-                |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
-                |+| camdir
-              ray = Ray (campos |+| (d |*| 140.0)) (norm d)
-              -- TODO: make a specialized avgColor function
-              avgColor xs = VecD (avg (map (dot (VecD 1 0 0)) xs))
-                                 (avg (map (dot (VecD 0 1 0)) xs))
-                                 (avg (map (dot (VecD 0 0 1)) xs))
+-- generatePicture :: (AccelStruct a b) =>
+--                    (a -> Ray -> Int -> State (Halton, Halton) ColorD)
+--                 -> Context a b
+--                 -> [[ColorD]]
+-- generatePicture color context =
+--   evalState (sequence $ replicate h line) (1, h, hal1, hal2)
+--      where  
+--        Context { 
+--          ctxw = w 
+--        , ctxh = h
+--        , ctxsamp = samp
+--        , ctxcx = cx
+--        , ctxcy = cy
+--        , ctxcamdir = camdir
+--        , ctxcampos = campos
+--        , ctxscene = scene
+--        } = context
+--        hal1 = halton 0 2
+--        hal2 = halton 0 2
+--        line :: State (Int, Int, Halton, Halton) [ColorD]
+--        line = do
+--          (x, y, hal1, hal2) <- get
+--          let (vals, (x', y', h1', h2')) = runState (sequence $ replicate w color') (1, y, hal1, hal2)
+--          put (x', y'-1, h1', h2')
+--          return vals
+--        color' :: State (Int, Int, Halton, Halton) ColorD
+--        color' = do
+--          (x, y, hal1, hal2) <- get
+--          let (val, (hal1', hal2')) = runState (sequence $ replicate samp (color (ctxscene context) (ray x y) 0)) (hal1, hal2)
+--          put (x+1, y, hal1', hal2')
+--          return $ avgColor val
+--            where
+--              d x y = (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
+--                  |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
+--                  |+| camdir
+--              ray x y = Ray (campos |+| ((d x y) |*| 140.0)) (norm (d x y))
 
-avg :: [Double] -> Double
-avg xs = (sum xs) / ((fromInteger . toInteger) (length xs))
+generatePicture :: (AccelStruct a b) =>
+                   (a -> Ray -> Int -> State Int ColorD)
+                -> Context a b
+                -> [[ColorD]]
+generatePicture color context =
+  evalState (sequence $ replicate h line) (1, h, firstRand)
+     where  
+       Context { 
+         ctxw = w 
+       , ctxh = h
+       , ctxsamp = samp
+       , ctxcx = cx
+       , ctxcy = cy
+       , ctxcamdir = camdir
+       , ctxcampos = campos
+       , ctxscene = scene
+       } = context
+       firstRand = 17
+       line :: State (Int, Int, Int) [ColorD]
+       line = do
+         (x, y, rand) <- get
+         let (vals, (x', y', nextRand)) = runState (sequence $ replicate w color') (1, y, rand)
+         put (x', y'-1, nextRand)
+         return vals
+       color' :: State (Int, Int, Int) ColorD
+       color' = do
+         (x, y, rand) <- get
+         let (val, nextRand) = runState (sequence $ replicate samp (color (ctxscene context) (ray x y) 0)) rand
+         put (x+1, y, nextRand)
+         return $ avgColor val
+           where
+             d x y = (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
+                 |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
+                 |+| camdir
+             ray x y = Ray (campos |+| ((d x y) |*| 140.0)) (norm (d x y))
 
 data Options = Options {
     width   :: Int
@@ -205,6 +234,6 @@ main = do
       , ctxcamdir = camdir
       , ctxscene = scene 
       }
-      picture = generatePicture radiance context 19
+      picture = generatePicture radiance context
   image <- newImage (w,h)
   saveImage picture image output 
