@@ -1,6 +1,5 @@
 module Cologne.ParseNFF (parseNFF) where
 
-import Numeric
 import Text.ParserCombinators.Parsec
 import qualified Text.ParserCombinators.Parsec.Token as PT
 import Text.ParserCombinators.Parsec.Language (emptyDef)
@@ -117,6 +116,7 @@ color = do
                        <|> Diffuse    <$ string "diff"
                        <?> "reflection type")
 
+background :: ObjParser VecD
 background = char 'b' *> (VecD <$> float <*> float <*> float) <* spaces
 --background = char 'b' *> (VecD <$> count 3 float)
 --background = char 'b' *> (VecD <$> (chainr1 float (<*>)))
@@ -141,6 +141,7 @@ viewpoint = do
   -- hither <- string "hither " *> float
   -- return (from, at, up, angle, hither)
 
+file :: ObjParser ((VecD, VecD), [Primitive ColorInfo])
 file = do
   cam <- viewpoint
   objs <- many $ (skipMany color) *> objects

@@ -16,7 +16,6 @@ import Control.Applicative ((<$>))
 
 import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
-import Cologne.Accel
 
 -- We use this data structure to generate a halton sequence, the same way as in
 -- the original smallpaint.

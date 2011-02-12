@@ -30,31 +30,28 @@ import Control.Monad.State
 import System.Console.CmdArgs
 import Graphics.GD
 import System.IO
-import Text.ParserCombinators.Parsec.Error
-import Text.ParserCombinators.Parsec.Pos
 
 import Cologne.Vec hiding (fmap)
 import Cologne.Primitives
-import Cologne.Primitives.Sphere
-import Cologne.Accel
 import Cologne.Accel.List
-import Cologne.Render
 import Cologne.Shaders.Smallpt
 import Cologne.ParseNFF
 
 saveImage :: [[ColorD]] -> Image -> FilePath -> IO ()
-saveImage picture image name = do
+saveImage picture image imageName = do
   mapM_ (\a -> setLinePixels a >> tell (snd a) (length picture)) (zip picture [0..])
   putStrLn ""
-  savePngFile name image
+  savePngFile imageName  image
   where
     setOnePixel y x v = let VecI r g b = vecD2I v 
                         in setPixel (x, y) (rgb r g b) image
     setLinePixels (l, y) = zipWithM_ (setOnePixel y) [0..] l
 
 tell :: Int -> Int -> IO ()
-tell x len = hPutStr stderr ("\r" ++ show ((fromInteger . toInteger) (x+1) * 100 / 
-           (fromInteger . toInteger) len) ++ "%       ")
+tell x len = hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 / 
+           toFloat len) ++ "%       ")
+  where toFloat :: Int -> Float
+        toFloat = fromInteger . toInteger
 
 {-
 generatePicture :: (AccelStruct a b) =>
@@ -115,7 +112,7 @@ generatePicture color context =
        firstRand = 17
        line :: State (Int, Int, Int) [ColorD]
        line = do
-         (x, y, rand) <- get
+         (_, y, rand) <- get
          let (vals, (x', y', nextRand)) = runState (sequence $ replicate w color') (1, y, rand)
          put (x', y'-1, nextRand)
          return vals
@@ -138,6 +135,7 @@ data Options = Options {
   , samples :: Int
   } deriving (Data, Typeable)
 
+options :: Mode (CmdArgs Options)
 options = cmdArgsMode $ Options {
     width   = 100 &= name "x" &= help "Width of image"
   , height  = 100 &= name "y" &= help "Height of image"
@@ -152,7 +150,7 @@ main = do
   inputContents <- readFile inputName
   putStrLn "Parsing input"
   case parseNFF inputContents inputName of
-    Left error -> putStrLn $ show error
+    Left err -> putStrLn $ show err
     Right ((campos, camdir), scene) -> do
       putStrLn "Input parsed"
       putStrLn "Rendering:"

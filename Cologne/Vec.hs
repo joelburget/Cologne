@@ -24,7 +24,6 @@ module Cologne.Vec (
 
 import Prelude hiding (fmap)
 import Data.Data
-import Data.Typeable
 import Data.List (foldl1')
 
 {- We put toInt and clamp here even though they don't really fit in this module
@@ -86,5 +85,6 @@ infixl 6 |+|
 infixl 6 |-|
 infixl 7 |*|
 
+avgColor :: [ColorD] -> ColorD
 avgColor xs = (foldl1' (|+|) xs) 
   |*| (1 / ((fromInteger . toInteger) (length xs)))

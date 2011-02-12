@@ -17,13 +17,8 @@ module Cologne.Primitives (
   , Ray(..)
   , AccelStruct(..)
   , ReflectionType(..)
+  , Context(..)
   ) where
-
-import Control.Applicative
-import Control.Monad.State
-import Data.List hiding (intersect, insert)
-import Data.Ord
-import Random
 
 import Cologne.Vec
   
@@ -98,3 +93,19 @@ class AccelStruct a b | a -> b where
   insert            :: Primitive b -> a -> a
   aIntersect        :: a -> Ray -> Intersection b
   listToAccelStruct :: [Primitive b] -> a
+
+{- This is the AccelStruct typeclass, which is used to store and interact with
+ - the primitives of a scene. This can result in huge speedups because rather
+ - than checking for intersection with every primitive in a scene (O(n)) we can
+ - reduce the complexity to O(lg(n)).
+ -}
+data (AccelStruct a b) => Context a b = Context { 
+    ctxw      :: !Int        -- ^ Width in Pixels
+  , ctxh      :: !Int        -- ^ Height in Pixels
+  , ctxsamp   :: !Int        -- ^ Samples to take?
+  , ctxcx     :: !VecD       -- ^ Change in x Direction per pixel
+  , ctxcy     :: !VecD       -- ^ Change in y Direction per pixel
+  , ctxcamdir :: !VecD       -- ^ Camera Direction
+  , ctxcampos :: !VecD       -- ^ Camera Position
+  , ctxscene  :: a           -- ^ Scene Primitive
+  } -- deriving (Data, Typeable)

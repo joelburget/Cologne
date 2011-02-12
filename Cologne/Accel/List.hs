@@ -13,7 +13,7 @@ instance AccelStruct [Primitive a] a where
   --insert :: Primitive a -> [Primitive a] -> [Primitive a]
   insert prim xs = prim:xs
 
-  --aIntersect a -> Ray -> Intersection b
+  --aIntersect :: a -> Ray -> Intersection b
   aIntersect [] ray = Miss
   aIntersect (obj:objs) ray@(Ray o d) = case intersect obj ray of
     Nothing -> aIntersect objs ray
@@ -21,7 +21,7 @@ instance AccelStruct [Primitive a] a where
       Miss -> i1
       i2@(Intersection d2 _ _) -> case (d1 < d2) of
         True -> i1
-        otherwise -> i2
+        _ -> i2
       where i1 = Intersection d1 (colorInfo obj) (normal obj (o |+| (d |*| d1)))
 
   -- In this case a list of primitives is already the acceleration structure

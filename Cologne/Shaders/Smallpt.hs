@@ -10,7 +10,6 @@ import Control.Applicative ((<$>))
 
 import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
-import Cologne.Accel
 
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it
