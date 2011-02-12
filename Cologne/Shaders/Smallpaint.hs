@@ -3,8 +3,7 @@
 -- This is a rewrite of smallpaint: http://keer0y.luminarium.hu/
 
 module Cologne.Shaders.Smallpaint (
-    ReflectionType(..)
-  , radiance
+    radiance
   , Halton(Halton)
   , halton
   , next
@@ -18,12 +17,6 @@ import Control.Applicative ((<$>))
 import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
 import Cologne.Accel
-
--- We're just emulating the classic diffuse, specular, refractive model.  We
--- need to know the color, diffusion, and what type of surface interaction
--- there is.
-
-data ReflectionType = Diffuse | Specular | Refractive deriving (Show)
 
 -- We use this data structure to generate a halton sequence, the same way as in
 -- the original smallpaint.

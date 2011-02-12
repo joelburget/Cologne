@@ -1,8 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Cologne.Shaders.Smallpt (
-    ReflectionType(..)
-  , radiance
+    radiance
   ) where
 
 import System.Random
@@ -12,12 +11,6 @@ import Control.Applicative ((<$>))
 import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
 import Cologne.Accel
-
--- We're just emulating the classic diffuse, specular, refractive model.  We
--- need to know the color, diffusion, and what type of surface interaction
--- there is.
-
-data ReflectionType = Diffuse | Specular | Refractive
 
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it

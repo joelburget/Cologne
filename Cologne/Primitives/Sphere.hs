@@ -4,8 +4,9 @@
 
 module Cologne.Primitives.Sphere where
 
+import Prelude hiding (fmap)
+
 import Cologne.Vec
-import Cologne.Vec as Vec
 import Cologne.Primitives
 
 sphere :: VecD -> Double -> a -> Primitive a
@@ -32,7 +33,7 @@ sphereIntersect pos rad (Ray o d)
 
 sphereBound :: VecD -> Double -> Bbox
 sphereBound pos rad = Bbox 
-                  (Vec.fmap ((-)rad) pos) 
+                  (fmap ((-)rad) pos) 
                   (VecD (2*rad) (2*rad) (2*rad))
 
 sphereNormal :: VecD -> VecD -> VecD

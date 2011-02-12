@@ -16,6 +16,7 @@ module Cologne.Primitives (
   , Intersection(..)
   , Ray(..)
   , AccelStruct(..)
+  , ReflectionType(..)
   ) where
 
 import Control.Applicative
@@ -50,6 +51,7 @@ data Ray = Ray {
  - n_2 where theta is the angle from the normal of the boundary of the surface
  - and n is the index of refraction of the material.
  -}
+data ReflectionType = Diffuse | Specular | Refractive deriving (Show)
 
 data Intersection a = Intersection {
     dist    :: !Double
@@ -86,6 +88,9 @@ data Primitive a = Primitive {
   -- shifted from the object to the radiance function.
   , colorInfo :: a
   }
+
+instance Show (Primitive a) where
+  show = const "prim"
 
 -- a: The accel struct type
 -- b: The info type
