@@ -13,6 +13,10 @@ module Cologne.Primitives (
   , normal
   , colorInfo
   , Bbox(..)
+  , bbox
+  , bboxIntersect 
+  , Dimension(..)
+  , nextDim
   , Intersection(..)
   , Ray(..)
   , AccelStruct(..)
@@ -21,6 +25,7 @@ module Cologne.Primitives (
   ) where
 
 import Cologne.Vec
+import Data.List (foldl1')
   
 data Ray = Ray {
     origin    :: !VecD
@@ -55,9 +60,38 @@ data Intersection a = Intersection {
   } | Miss
 
 data Bbox = Bbox {
-    start      :: !VecD
-  , dimensions :: !VecD
+    start :: !VecD
+  , stop  :: !VecD
   }
+
+data Dimension = X | Y | Z
+nextDim :: Dimension -> Dimension
+nextDim X = Y
+nextDim Y = Z
+nextDim Z = X
+
+bbox :: [Primitive a] -> Bbox
+bbox xs = Bbox smallest largest
+  where
+  -- TODO: loop fusion
+  smallest = foldl1' minVec $ map (start . bound) xs
+  largest  = foldl1' maxVec $ map (stop . bound) xs
+  minVec (VecD x1 y1 z1) (VecD x2 y2 z2) =
+    VecD (min x1 x2) (min y1 y2) (min z1 z2)
+  maxVec (VecD x1 y1 z1) (VecD x2 y2 z2) =
+    VecD (max x1 x2) (max y1 y2) (max z1 z2)
+
+bboxIntersect :: Bbox -> Ray -> Bool
+bboxIntersect (Bbox (VecD x1 y1 z1) (VecD x2 y2 z2)) 
+              (Ray (VecD ox oy oz) (VecD dx dy dz)) =
+  if lastin > firstout || firstout < 0 then False else True
+    where
+    (inx, outx) = (if dx > 0 then id else rev) ((x1-ox)/dx, (x2-ox)/dx)
+    (iny, outy) = (if dy > 0 then id else rev) ((y1-oy)/dy, (y2-oy)/dy)
+    (inz, outz) = (if dz > 0 then id else rev) ((z1-oz)/dz, (z2-oz)/dz)
+    rev (a, b)  = (b, a)
+    lastin      = max inx  (max iny  inz)
+    firstout    = min outx (min outy outz)
 
 data Primitive a = Primitive {
 
@@ -87,7 +121,7 @@ data Primitive a = Primitive {
 instance Show (Primitive a) where
   show = const "prim"
 
--- a: The accel struct type
+-- a: The accel struct type, e.g. [Primitive b]
 -- b: The info type
 class AccelStruct a b | a -> b where
   insert            :: Primitive b -> a -> a

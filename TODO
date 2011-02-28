@@ -1,2 +1,6 @@
 1. see various todo's and notes scattered about the source
 2. determine whether deriving Data and Typeable has any benefit
+
+Array for image:
+http://hackage.haskell.org/package/Codec-Image-DevIL
+http://hackage.haskell.org/package/repa

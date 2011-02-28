@@ -33,7 +33,8 @@ import System.IO
 
 import Cologne.Vec hiding (fmap)
 import Cologne.Primitives
-import Cologne.Accel.List
+import Cologne.Accel.KdTree
+--import Cologne.Accel.List
 import Cologne.Shaders.Smallpt
 import Cologne.ParseNFF
 
@@ -167,7 +168,7 @@ main = do
           , ctxcy = cy
           , ctxcampos = campos
           , ctxcamdir = camdir
-          , ctxscene = scene 
+          , ctxscene = listToAccelStruct scene :: KdTree (Primitive (ColorD, ColorD, ReflectionType)) -- Ah this is horrible! TODO: make this horrible type sig unnecessary
           }
           picture = generatePicture radiance context
       image <- newImage (w,h)

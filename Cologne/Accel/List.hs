@@ -13,7 +13,7 @@ instance AccelStruct [Primitive a] a where
   --insert :: Primitive a -> [Primitive a] -> [Primitive a]
   insert prim xs = prim:xs
 
-  --aIntersect :: a -> Ray -> Intersection b
+  --aIntersect :: [Primitive a] -> Ray -> Intersection a
   aIntersect [] ray = Miss
   aIntersect (obj:objs) ray@(Ray o d) = case intersect obj ray of
     Nothing -> aIntersect objs ray
@@ -26,4 +26,5 @@ instance AccelStruct [Primitive a] a where
 
   -- In this case a list of primitives is already the acceleration structure
   -- we're converting to, so we do nothing
+  --listToAccelStruct :: [Primitive a] -> [Primitive a]
   listToAccelStruct = id
