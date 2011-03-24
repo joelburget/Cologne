@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Cologne.Shaders.Smallpt (
     radiance
@@ -23,7 +24,7 @@ radiance :: (AccelStruct a (VecD , VecD, ReflectionType)) =>
             Int ->
             State Int ColorD
 radiance scene ray depth = do
-  rand <- get
+  !rand <- get
   put $ (fst . next . mkStdGen) rand
   case aIntersect scene ray of
     Miss -> return $ VecD 0 0 0

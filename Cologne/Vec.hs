@@ -47,8 +47,8 @@ clamp x | x < 0     = 0
 
 -- Strict vector types reduced execution time from 15 to 13 seconds in early testing
 -- In the future I may decide to allow Float as well
-data VecD = VecD !Double !Double !Double deriving (Show, Data, Typeable)
-data VecI = VecI !Int !Int !Int deriving (Data, Typeable)
+data VecD = VecD !Double !Double !Double deriving (Show, Eq, Data, Typeable)
+data VecI = VecI !Int !Int !Int deriving (Eq, Data, Typeable)
 
 type ColorD = VecD
 type ColorI = VecI

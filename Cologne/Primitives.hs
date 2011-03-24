@@ -121,6 +121,11 @@ data Primitive a = Primitive {
 instance Show (Primitive a) where
   show = const "prim"
 
+{- This is the AccelStruct typeclass, which is used to store and interact with
+ - the primitives of a scene. This can result in huge speedups because rather
+ - than checking for intersection with every primitive in a scene (O(n)) we can
+ - reduce the complexity to O(lg(n)).
+ -}
 -- a: The accel struct type, e.g. [Primitive b]
 -- b: The info type
 class AccelStruct a b | a -> b where
@@ -128,11 +133,6 @@ class AccelStruct a b | a -> b where
   aIntersect        :: a -> Ray -> Intersection b
   listToAccelStruct :: [Primitive b] -> a
 
-{- This is the AccelStruct typeclass, which is used to store and interact with
- - the primitives of a scene. This can result in huge speedups because rather
- - than checking for intersection with every primitive in a scene (O(n)) we can
- - reduce the complexity to O(lg(n)).
- -}
 data (AccelStruct a b) => Context a b = Context { 
     ctxw      :: !Int        -- ^ Width in Pixels
   , ctxh      :: !Int        -- ^ Height in Pixels
