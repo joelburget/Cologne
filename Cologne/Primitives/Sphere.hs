@@ -4,19 +4,17 @@
 
 module Cologne.Primitives.Sphere where
 
-import Prelude hiding (fmap)
-
-import Cologne.Vec
+import Graphics.Formats.Assimp (Vec3D, Vec(Vec3D), vmap, (|-|), dot, normalize)
 import Cologne.Primitives
 
-sphere :: VecD -> Double -> a -> Primitive a
+sphere :: Vec3D -> Double -> a -> Primitive a
 sphere pos rad info =
   Primitive (sphereIntersect pos rad)
             (sphereBound pos rad)
             (sphereNormal pos)
             info
 
-sphereIntersect :: VecD -> Double -> Ray -> Maybe Double
+sphereIntersect :: Vec3D -> Double -> Ray -> Maybe Double
 sphereIntersect pos rad (Ray o d)
   | det < 0 = Nothing
   | t > eps = Just t
@@ -31,10 +29,10 @@ sphereIntersect pos rad (Ray o d)
         t = b - det'
         t' = b + det'
 
-sphereBound :: VecD -> Double -> Bbox
+sphereBound :: Vec3D -> Double -> Bbox
 sphereBound pos rad = Bbox 
-                  (fmap ((-)rad) pos) 
-                  (VecD (2*rad) (2*rad) (2*rad))
+                  (vmap ((-)rad) pos) 
+                  (Vec3D (2*rad) (2*rad) (2*rad))
 
-sphereNormal :: VecD -> VecD -> VecD
-sphereNormal pos vec = norm $ vec |-| pos
+sphereNormal :: Vec3D -> Vec3D -> Vec3D
+sphereNormal pos vec = normalize $ vec |-| pos

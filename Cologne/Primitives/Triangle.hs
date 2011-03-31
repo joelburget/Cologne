@@ -2,10 +2,10 @@
 
 module Cologne.Primitives.Triangle where
 
-import Cologne.Vec
+import Graphics.Formats.Assimp (Vec3D, Vec(Vec3D), (|-|), dot, cross, normalize)
 import Cologne.Primitives
 
-triangle :: VecD -> VecD -> VecD -> a -> Primitive a
+triangle :: Vec3D -> Vec3D -> Vec3D -> a -> Primitive a
 triangle v1 v2 v3 i =
   Primitive (triangleIntersect v1 v2 v3)
             (triangleBound     v1 v2 v3)
@@ -13,7 +13,7 @@ triangle v1 v2 v3 i =
             i
 
 -- Moller-Trumbore triangle intersection
-triangleIntersect :: VecD -> VecD -> VecD -> Ray -> Maybe Double
+triangleIntersect :: Vec3D -> Vec3D -> Vec3D -> Ray -> Maybe Double
 triangleIntersect x y z (Ray orig dir) =
   let edge1 = y |-| x
       edge2 = z |-| x
@@ -39,10 +39,10 @@ triangleIntersect x y z (Ray orig dir) =
             Just $ (edge2 `dot` q) * invdet
 
 
-triangleBound :: VecD -> VecD -> VecD -> Bbox
-triangleBound (VecD x1 y1 z1) (VecD x2 y2 z2) (VecD x3 y3 z3) =
-  Bbox (VecD (min x1 $ min x2 x3) (min y1 $ min y2 y3) (min z1 $ min z2 z3))
-       (VecD (max x1 $ max x2 x3) (max y1 $ max y2 y3) (max z1 $ max z2 z3))
+triangleBound :: Vec3D -> Vec3D -> Vec3D -> Bbox
+triangleBound (Vec3D x1 y1 z1) (Vec3D x2 y2 z2) (Vec3D x3 y3 z3) =
+  Bbox (Vec3D (min x1 $ min x2 x3) (min y1 $ min y2 y3) (min z1 $ min z2 z3))
+       (Vec3D (max x1 $ max x2 x3) (max y1 $ max y2 y3) (max z1 $ max z2 z3))
 
-triangleNormal :: VecD -> VecD -> VecD -> VecD -> VecD
-triangleNormal v1 v2 v3 _ = norm $ (v2 |-| v1) `cross` (v3 |-| v1)
+triangleNormal :: Vec3D -> Vec3D -> Vec3D -> Vec3D -> Vec3D
+triangleNormal v1 v2 v3 _ = normalize $ (v2 |-| v1) `cross` (v3 |-| v1)

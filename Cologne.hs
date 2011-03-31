@@ -30,40 +30,41 @@ import Control.Monad.State
 import System.Console.CmdArgs
 import Graphics.GD
 import System.IO
+import Graphics.Formats.Assimp (Vec(Vec3I, Vec3D), Color3D, dot, (|*|), 
+                                avgColor, len, toInt)
 
-import Cologne.Vec hiding (fmap)
 import Cologne.Primitives
 import Cologne.Accel.KdTree
 --import Cologne.Accel.List
 import Cologne.Shaders.Smallpt
-import Cologne.ParseNFF
+import Cologne.AssimpImport
 
-saveImage :: [[ColorD]] -> Image -> FilePath -> IO ()
+saveImage :: [[Color3D]] -> Image -> FilePath -> IO ()
 saveImage picture image imageName = do
   mapM_ (\a -> setLinePixels a >> tell (snd a) (length picture)) (zip picture [0..])
   putStrLn ""
   savePngFile imageName  image
   where
-    setOnePixel y x v = let VecI r g b = vecD2I v 
-                        in setPixel (x, y) (rgb r g b) image
+    setOnePixel y x (Vec3D r g b) = setPixel (x, y) 
+      (rgb (toInt r) (toInt g) (toInt b)) image
     setLinePixels (l, y) = zipWithM_ (setOnePixel y) [0..] l
 
 tell :: Int -> Int -> IO ()
-tell x len = hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 / 
+tell x len = hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 /
            toFloat len) ++ "%       ")
   where toFloat :: Int -> Float
         toFloat = fromInteger . toInteger
 
 {-
 generatePicture :: (AccelStruct a b) =>
-                   (a -> Ray -> Int -> State (Halton, Halton) ColorD)
+                   (a -> Ray -> Int -> State (Halton, Halton) Color3D)
                 -> Context a b
-                -> [[ColorD]]
+                -> [[Color3D]]
 generatePicture color context =
   evalState (sequence $ replicate h line) (1, h, hal1, hal2)
-     where  
-       Context { 
-         ctxw = w 
+     where
+       Context {
+         ctxw = w
        , ctxh = h
        , ctxsamp = samp
        , ctxcx = cx
@@ -74,13 +75,13 @@ generatePicture color context =
        } = context
        hal1 = halton 0 2
        hal2 = halton 0 2
-       line :: State (Int, Int, Halton, Halton) [ColorD]
+       line :: State (Int, Int, Halton, Halton) [Color3D]
        line = do
          (x, y, hal1, hal2) <- get
          let (vals, (x', y', h1', h2')) = runState (sequence $ replicate w color') (1, y, hal1, hal2)
          put (x', y'-1, h1', h2')
          return vals
-       color' :: State (Int, Int, Halton, Halton) ColorD
+       color' :: State (Int, Int, Halton, Halton) Color3D
        color' = do
          (x, y, hal1, hal2) <- get
          let (val, (hal1', hal2')) = runState (sequence $ replicate samp (color (ctxscene context) (ray x y) 0)) (hal1, hal2)
@@ -94,82 +95,61 @@ generatePicture color context =
 -}
 
 generatePicture :: (AccelStruct a b) =>
-                   (a -> Ray -> Int -> State Int ColorD)
+                   (a -> Ray -> Int -> State Int Color3D)
                 -> Context a b
-                -> [[ColorD]]
-generatePicture color context =
+                -> [[Color3D]]
+generatePicture color (Context w h samp cams scene) =
   evalState (sequence $ replicate h line) (1, h, firstRand)
-     where  
-       Context { 
-         ctxw = w 
-       , ctxh = h
-       , ctxsamp = samp
-       , ctxcx = cx
-       , ctxcy = cy
-       , ctxcamdir = camdir
-       , ctxcampos = campos
-       , ctxscene = scene
-       } = context
+     where
        firstRand = 17
-       line :: State (Int, Int, Int) [ColorD]
+       line :: State (Int, Int, Int) [Color3D]
        line = do
          (_, y, rand) <- get
          let (vals, (x', y', nextRand)) = runState (sequence $ replicate w color') (1, y, rand)
          put (x', y'-1, nextRand)
          return vals
-       color' :: State (Int, Int, Int) ColorD
+       color' :: State (Int, Int, Int) Color3D
        color' = do
          (x, y, rand) <- get
-         let (val, nextRand) = runState (sequence $ replicate samp (color (ctxscene context) (ray x y) 0)) rand
+         let (val, nextRand) = runState (sequence $ replicate samp (color scene (ray x y) 0)) rand
          put (x+1, y, nextRand)
          return $ avgColor val
            where
-             d x y = (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
-                 |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
-                 |+| camdir
-             ray x y = Ray (campos |+| ((d x y) |*| 140.0)) (norm (d x y))
+             -- d x y = (cx |*| (((fromIntegral x) / fromIntegral w) - 0.5))
+             --     |+| (cy |*| (((fromIntegral y) / fromIntegral h) - 0.5))
+             --     |+| camdir
+             -- ray x y = Ray (campos |+| ((d x y) |*| 140.0)) (norm (d x y))
+             d = undefined
+             ray = undefined
 
 data Options = Options {
-    width   :: Int
-  , height  :: Int
-  , input   :: String
-  , samples :: Int
+    oWidth   :: Int
+  , oHeight  :: Int
+  , oInput   :: String
+  , oSamples :: Int
   } deriving (Data, Typeable)
 
 options :: Mode (CmdArgs Options)
 options = cmdArgsMode $ Options {
-    width   = 100 &= name "x" &= help "Width of image"
-  , height  = 100 &= name "y" &= help "Height of image"
-  , input  = "cornell.col" &= args &= typ "Input File"
-  , samples = 100 &= help "Samples per pixel"
+    oWidth   = 100 &= name "x" &= help "Width of image"
+  , oHeight  = 100 &= name "y" &= help "Height of image"
+  , oInput   = "cornell.col"   &= args &= typ "Input File"
+  , oSamples = 100 &= help "Samples per pixel"
   } &= summary "Cologne Ray Tracer"
+
+radiance' scene ray depth = do
+  case aIntersect scene ray of
+    Miss -> return $ Vec3D 0 0 0
+    Intersection t (color, emission, rtype) nrm -> 
+      return $ color |*| (abs (((direction ray) `dot` nrm) / ((len (direction ray)) * (len nrm))))
 
 main :: IO ()
 main = do
   opts <- cmdArgsRun options
-  let inputName = input opts --"cornell.col"
-  inputContents <- readFile inputName
+  let inputName = oInput opts
   putStrLn "Parsing input"
-  case parseNFF inputContents inputName of
-    Left err -> putStrLn $ show err
-    Right ((campos, camdir), scene) -> do
-      putStrLn "Input parsed"
-      putStrLn "Rendering:"
-      let output = "image.png"
-          w = width opts
-          h = height opts
-          cx = VecD (0.5135 * fromIntegral w / fromIntegral h) 0 0
-          cy = norm (cx `cross` camdir) |*| 0.5135
-          context = Context { 
-            ctxw = w
-          , ctxh = h
-          , ctxsamp = samples opts
-          , ctxcx = cx
-          , ctxcy = cy
-          , ctxcampos = campos
-          , ctxcamdir = camdir
-          , ctxscene = listToAccelStruct scene :: KdTree (Primitive (ColorD, ColorD, ReflectionType)) -- Ah this is horrible! TODO: make this horrible type sig unnecessary
-          }
-          picture = generatePicture radiance context
-      image <- newImage (w,h)
-      saveImage picture image output 
+  context <- assimpImport inputName
+  image <- newImage (200,200)
+  let picture = generatePicture radiance' context
+      output = "image.png"
+  saveImage picture image output

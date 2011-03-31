@@ -24,12 +24,12 @@ module Cologne.Primitives (
   , Context(..)
   ) where
 
-import Cologne.Vec
 import Data.List (foldl1')
+import Graphics.Formats.Assimp (Camera, Vec3D, Vec(Vec3D))
   
 data Ray = Ray {
-    origin    :: !VecD
-  , direction :: !VecD
+    origin    :: !Vec3D
+  , direction :: !Vec3D
   }
 
 {-
@@ -56,12 +56,12 @@ data ReflectionType = Diffuse | Specular | Refractive deriving (Show)
 data Intersection a = Intersection {
     dist    :: !Double
   , info    :: !a
-  , iNormal :: !VecD
+  , iNormal :: !Vec3D
   } | Miss
 
 data Bbox = Bbox {
-    start :: !VecD
-  , stop  :: !VecD
+    start :: !Vec3D
+  , stop  :: !Vec3D
   }
 
 data Dimension = X | Y | Z
@@ -76,14 +76,14 @@ bbox xs = Bbox smallest largest
   -- TODO: loop fusion
   smallest = foldl1' minVec $ map (start . bound) xs
   largest  = foldl1' maxVec $ map (stop . bound) xs
-  minVec (VecD x1 y1 z1) (VecD x2 y2 z2) =
-    VecD (min x1 x2) (min y1 y2) (min z1 z2)
-  maxVec (VecD x1 y1 z1) (VecD x2 y2 z2) =
-    VecD (max x1 x2) (max y1 y2) (max z1 z2)
+  minVec (Vec3D x1 y1 z1) (Vec3D x2 y2 z2) =
+    Vec3D (min x1 x2) (min y1 y2) (min z1 z2)
+  maxVec (Vec3D x1 y1 z1) (Vec3D x2 y2 z2) =
+    Vec3D (max x1 x2) (max y1 y2) (max z1 z2)
 
 bboxIntersect :: Bbox -> Ray -> Bool
-bboxIntersect (Bbox (VecD x1 y1 z1) (VecD x2 y2 z2)) 
-              (Ray (VecD ox oy oz) (VecD dx dy dz)) =
+bboxIntersect (Bbox (Vec3D x1 y1 z1) (Vec3D x2 y2 z2)) 
+              (Ray (Vec3D ox oy oz) (Vec3D dx dy dz)) =
   if lastin > firstout || firstout < 0 then False else True
     where
     (inx, outx) = (if dx > 0 then id else rev) ((x1-ox)/dx, (x2-ox)/dx)
@@ -103,7 +103,7 @@ data Primitive a = Primitive {
   , bound     :: Bbox
 
   -- Return the normal vector at any point on the surface
-  , normal    :: VecD -> VecD
+  , normal    :: Vec3D -> Vec3D
     
   -- Do your color stuff however you want, for instance if you're feeling
   -- really haskell-ish, you may like each object to have a function that you
@@ -111,8 +111,8 @@ data Primitive a = Primitive {
   -- Double -> Int -> Int -> ColorD) taking the scene, incoming ray,
   -- recursive depth, and a random number. This function would then be called
   -- by the radiance function. This approach gives a lot of flexibilitiy. On
-  -- the other hand it is probably more efficient for b to be a tuple (VecD,
-  -- VecD, ReflectionType) containing the color, emission, and whether the
+  -- the other hand it is probably more efficient for b to be a tuple (Vec3D,
+  -- Vec3D, ReflectionType) containing the color, emission, and whether the
   -- surface is diffuse, refractive, or specular. Then the logic would be
   -- shifted from the object to the radiance function.
   , colorInfo :: a
@@ -134,12 +134,9 @@ class AccelStruct a b | a -> b where
   listToAccelStruct :: [Primitive b] -> a
 
 data (AccelStruct a b) => Context a b = Context { 
-    ctxw      :: !Int        -- ^ Width in Pixels
-  , ctxh      :: !Int        -- ^ Height in Pixels
-  , ctxsamp   :: !Int        -- ^ Samples to take?
-  , ctxcx     :: !VecD       -- ^ Change in x Direction per pixel
-  , ctxcy     :: !VecD       -- ^ Change in y Direction per pixel
-  , ctxcamdir :: !VecD       -- ^ Camera Direction
-  , ctxcampos :: !VecD       -- ^ Camera Position
-  , ctxscene  :: a           -- ^ Scene Primitive
+    width   :: !Int        -- ^ Width in Pixels
+  , height  :: !Int        -- ^ Height in Pixels
+  , samples :: !Int        -- ^ Samples to take
+  , cameras :: [Camera]    -- ^ List of cameras. Only the first is currently used.
+  , scene   :: a           -- ^ Scene Primitive
   } -- deriving (Data, Typeable)

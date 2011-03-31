@@ -6,7 +6,7 @@
 
 module Cologne.Accel.List where
 
-import Cologne.Vec
+import Graphics.Formats.Assimp (Vec3D, Vec(Vec3D), (|+|), (|*|))
 import Cologne.Primitives
 
 instance AccelStruct [Primitive a] a where

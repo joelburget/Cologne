@@ -8,8 +8,8 @@ module Cologne.Shaders.Smallpt (
 import System.Random
 import Control.Monad.State
 import Control.Applicative ((<$>))
+import Graphics.Formats.Assimp (Vec3D, Vec(Vec3D), Color3D, normalize, dot, cross, vmult, (|*|), (|+|), (|-|))
 
-import Cologne.Vec
 import Cologne.Primitives hiding (intersect)
 
 -- To compute the radiance of a ray shot into the scene we check to see if the
@@ -18,16 +18,16 @@ import Cologne.Primitives hiding (intersect)
 -- This is a rewritten copy of the radiance function from smallpt-haskell:
 -- http://www.partario.com/blog/2010/03/a-render-farm-in-haskell.html which is,
 -- in turn, a rewrite of the original smallpt: http://kevinbeason.com/smallpt/
-radiance :: (AccelStruct a (VecD , VecD, ReflectionType)) =>
+radiance :: (AccelStruct a (Color3D , Color3D, ReflectionType)) =>
             a ->
             Ray ->
             Int ->
-            State Int ColorD
+            State Int Color3D
 radiance scene ray depth = do
   !rand <- get
   put $ (fst . next . mkStdGen) rand
   case aIntersect scene ray of
-    Miss -> return $ VecD 0 0 0
+    Miss -> return $ Vec3D 0 0 0
     Intersection t (color, emission, rtype) nrm -> objRadiance
       where
         objRadiance
@@ -43,21 +43,21 @@ radiance scene ray depth = do
                 n = nrm
                 nl | (n `dot` raydir) < 0 = n
                    | otherwise = n |*| (-1)
-                p = let VecD fx fy fz = color in maximum [fx, fy, fz]
+                p = let Vec3D fx fy fz = color in maximum [fx, fy, fz]
                 sGen = mkStdGen rand
                 r2 = fst $ randomR (0, 1.0) ((snd . next) sGen) --(fst . next . snd . next) sGen
                 reflRay = Ray x (raydir |-| (n |*| (2 * (n `dot` raydir))))
                 reflect Diffuse =
                   let
                     w = nl
-                    VecD wx _ _ = w
-                    u | abs wx > 0.1 = norm $ VecD 0 1 0 `cross` w
-                      | otherwise = norm $ VecD 1 0 0 `cross` w
+                    Vec3D wx _ _ = w
+                    u | abs wx > 0.1 = normalize $ Vec3D 0 1 0 `cross` w
+                      | otherwise = normalize $ Vec3D 1 0 0 `cross` w
                     v = w `cross` u
                     r1 = fst $ randomR (0, 2*pi) sGen --(fst . next) sGen
                     -- see above for r2
                     r2s = sqrt r2
-                    d = norm ((u |*| ((cos r1) * r2s))
+                    d = normalize ((u |*| ((cos r1) * r2s))
                           |+| (v |*| ((sin r1) * r2s))
                           |+| (w |*| sqrt (1 - r2)))
                   in
@@ -82,7 +82,7 @@ radiance scene ray depth = do
                         | otherwise = nt / nc
                     ddn = raydir `dot` nl
                     cos2t = 1 - (nnt * nnt * (1 - (ddn * ddn)))
-                    tdir = norm ((raydir |*| nnt) |-|
+                    tdir = normalize ((raydir |*| nnt) |-|
                       (n |*| ((if into then 1 else (-1)) * (ddn * nnt + sqrt cos2t))))
                     a = nt - nc
                     b = nt + nc
