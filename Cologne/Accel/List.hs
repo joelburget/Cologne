@@ -6,7 +6,8 @@
 
 module Cologne.Accel.List where
 
-import Graphics.Formats.Assimp (Vec3D, Vec(Vec3D), (|+|), (|*|))
+import Data.Vect (Vec3(Vec3), (&+), (&*))
+
 import Cologne.Primitives
 
 instance AccelStruct [Primitive a] a where
@@ -22,7 +23,7 @@ instance AccelStruct [Primitive a] a where
       i2@(Intersection d2 _ _) -> case (d1 < d2) of
         True -> i1
         _ -> i2
-      where i1 = Intersection d1 (colorInfo obj) (normal obj (o |+| (d |*| d1)))
+      where i1 = Intersection d1 (colorInfo obj) (normal obj (o &+ (d &* d1)))
 
   -- In this case a list of primitives is already the acceleration structure
   -- we're converting to, so we do nothing

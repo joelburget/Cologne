@@ -8,8 +8,8 @@ module Cologne.Accel.KdTree where
  -}
 
 import Data.List (sortBy)
+import Data.Vect (Vec3(Vec3), (&+), (&*))
 
-import Graphics.Formats.Assimp (Vec(Vec3D), Vec3D, Color3D, normalize, cross, (|*|), (|+|), (|-|))
 import Cologne.Primitives
 import Data.List (foldl1')
 import Cologne.Accel.List
@@ -24,10 +24,10 @@ instance Show (KdTree a) where
 
 maxItems = 50 -- The most items we'll store in a leaf before splitting it
 
-xyz :: Dimension -> Vec3D -> Double
-xyz X (Vec3D x _ _) = x
-xyz Y (Vec3D _ y _) = y
-xyz Z (Vec3D _ _ z) = z
+xyz :: Dimension -> Vec3 -> Float
+xyz X (Vec3 x _ _) = x
+xyz Y (Vec3 _ y _) = y
+xyz Z (Vec3 _ _ z) = z
 
 -- We're using a poor binning heuristic
 -- TODO: There was a stack overflow when I set maxItems to 2, indicating a bug
@@ -44,9 +44,9 @@ makeKd xs dim
   less a b
     | (xyz dim $ (middle . bound) a) < (xyz dim $ (middle . bound) b) = LT
     | otherwise = GT
-  middle :: Bbox -> Vec3D
+  middle :: Bbox -> Vec3
   middle box = avgVec (start box) (stop box)
-  avgVec v1 v2 = (v1 |+| v2) |*| 0.5
+  avgVec v1 v2 = (v1 &+ v2) &* 0.5
 
 instance AccelStruct (KdTree (Primitive a)) a where
   --insert :: Primitive a -> KdTree (Primitive a) -> KdTree (Primitive a)
@@ -74,5 +74,5 @@ instance AccelStruct (KdTree (Primitive a)) a where
             rightIsect = aIntersect right ray
 
   --listToAccelStruct :: [Primitive a] -> KdTree (Primitive a)
-  listToAccelStruct [] = Leaf (Bbox (Vec3D 0 0 0) (Vec3D 0 0 0)) X []
+  listToAccelStruct [] = Leaf (Bbox (Vec3 0 0 0) (Vec3 0 0 0)) X []
   listToAccelStruct ls = makeKd ls X
