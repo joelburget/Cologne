@@ -3,7 +3,7 @@
 -- This is a rewrite of smallpaint: http://keer0y.luminarium.hu/
 
 module Cologne.Shaders.Smallpaint (
-    radiance
+    smallpaint
   , Halton(Halton)
   , halton
   , next
@@ -44,12 +44,12 @@ hGet (Halton value inv_base) = value
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it
 -- hits, we return the color returned by the object for that particular ray.
-radiance :: (AccelStruct a (VecD, VecD, ReflectionType)) => 
+smallpaint :: (AccelStruct a (VecD, VecD, ReflectionType)) => 
              a -> 
              Ray -> 
              Int -> 
              State (Halton, Halton) ColorD
-radiance scene ray depth = do
+smallpaint scene ray depth = do
   (hal1, hal2) <- get
   case aIntersect scene ray of
     Miss -> return $ VecD 0 0 0
@@ -80,12 +80,12 @@ radiance scene ray depth = do
                 VecD ((cos phi) * r) ((sin phi) * r) u1
           in do
             put (hal1', hal2')
-            (\x -> (x `vmult` color) |*| (cost * 0.1)) <$> radiance scene (Ray hp rayd) (depth + 1)
+            (\x -> (x `vmult` color) |*| (cost * 0.1)) <$> smallpaint scene (Ray hp rayd) (depth + 1)
         clr Specular = 
           let
             reflRay = Ray hp (raydir |-| (n |*| (2 * (n `dot` raydir))))
           in
-            radiance scene reflRay (depth + 1)
+            smallpaint scene reflRay (depth + 1)
         clr Refractive = 
           let
             refrIndex = 1.9
@@ -101,5 +101,42 @@ radiance scene ray depth = do
           in
             if (cost2 > 0)
               then 
-                radiance scene (Ray hp rayd) (depth + 1)
+                smallpaint scene (Ray hp rayd) (depth + 1)
               else return $ VecD 0 0 0
+
+generatePicture :: (AccelStruct a b) =>
+                   (a -> Ray -> Int -> State (Halton, Halton) Vec3)
+                -> Context a b
+                -> [[Vec3]]
+generatePicture color context =
+  evalState (sequence $ replicate h line) (1, h, hal1, hal2)
+     where
+       Context {
+         ctxw = w
+       , ctxh = h
+       , ctxsamp = samp
+       , ctxcx = cx
+       , ctxcy = cy
+       , ctxcamdir = camdir
+       , ctxcampos = campos
+       , ctxscene = scene
+       } = context
+       hal1 = halton 0 2
+       hal2 = halton 0 2
+       line :: State (Int, Int, Halton, Halton) [Vec3]
+       line = do
+         (x, y, hal1, hal2) <- get
+         let (vals, (x', y', h1', h2')) = runState (sequence $ replicate w color') (1, y, hal1, hal2)
+         put (x', y'-1, h1', h2')
+         return vals
+       color' :: State (Int, Int, Halton, Halton) Vec3
+       color' = do
+         (x, y, hal1, hal2) <- get
+         let (val, (hal1', hal2')) = runState (sequence $ replicate samp (color (ctxscene context) (ray x y) 0)) (hal1, hal2)
+         put (x+1, y, hal1', hal2')
+         return $ avgColor val
+           where
+             d x y = (cx &! (((fromIntegral x) / fromIntegral w) - 0.5))
+                 &+ (cy &! (((fromIntegral y) / fromIntegral h) - 0.5))
+                 &+ camdir
+             ray x y = Ray (campos &+ ((d x y) &! 140.0)) (normalize (d x y))
