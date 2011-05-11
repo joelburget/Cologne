@@ -5,6 +5,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Cologne.Primitives (
     Primitive(Primitive)
@@ -21,6 +23,8 @@ module Cologne.Primitives (
   , Ray(..)
   , AccelStruct(..)
   , ReflectionType(..)
+  , Options(..)
+  , defaultOptions
   , Context(..)
   , avgColor
   , toInt
@@ -29,6 +33,8 @@ module Cologne.Primitives (
 import Data.List (foldl1')
 import Data.Vect.Float (Vec3(Vec3), (&+), (&*))
 import Graphics.Formats.Assimp (Camera)
+import System.Console.CmdArgs
+import Data.Vector (Vector)
   
 data Ray = Ray {
     origin    :: !Vec3
@@ -136,10 +142,24 @@ class AccelStruct a b | a -> b where
   aIntersect        :: a -> Ray -> Intersection b
   listToAccelStruct :: [Primitive b] -> a
 
+data Options = Options {
+    width   :: Int    -- ^ Width in Pixels
+  , height  :: Int    -- ^ Height in Pixels
+  , samples :: Int    -- ^ Samples to take
+  , input   :: String -- ^ Name of the input file
+  , shader  :: String -- ^ Name of the shader to use
+  } deriving (Data, Typeable)
+
+defaultOptions = Options {
+    width   = 250 &= name "w" &= help "Width of image"
+  , height  = 250 &= name "h" &= help "Height of image"
+  , samples = 100 &= help "Samples per pixel"
+  , input   = "cornell.col"   &= args &= typ "Input File"
+  , shader  = "smallpt" &= help "Name of the shader to use"
+  } &= summary "Cologne Ray Tracer v0.2 (c) Joel Burget 2010-2011" &= verbosity
+
 data (AccelStruct a b) => Context a b = Context { 
-    width   :: !Int        -- ^ Width in Pixels
-  , height  :: !Int        -- ^ Height in Pixels
-  , samples :: !Int        -- ^ Samples to take
+    options :: Options
   , cameras :: [Camera]    -- ^ List of cameras. Only the first is currently used.
   , scene   :: a           -- ^ Scene Primitive
   }

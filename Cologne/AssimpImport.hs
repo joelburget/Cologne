@@ -8,7 +8,7 @@ import Graphics.Formats.Assimp (importFile, Scene(Scene), cameraPosition,
   lookAt, Light, Face, Mesh, indices, cameras, meshes, faces, vertices, 
   lightPosition, PostProcessSteps(CalcTangentSpace, Triangulate), lights)
 import Cologne.Primitives (Primitive, AccelStruct, Context(Context), 
-  ReflectionType(Diffuse), listToAccelStruct)
+  ReflectionType(Diffuse), listToAccelStruct, defaultOptions)
 import Cologne.Primitives.Triangle (triangle)
 import Cologne.Primitives.Sphere (sphere)
 -- import Cologne.Accel.KdTree (KdTree)
@@ -20,17 +20,14 @@ type ColorInfo = (Vec3, Vec3, ReflectionType)
 -- type ContextType = Context (KdTree (Primitive ColorInfo)) ColorInfo
 type ContextType = Context [Primitive ColorInfo] ColorInfo
 
-assimpImport :: FilePath -> IO ContextType
-assimpImport path = liftM convert $ importFile path Triangulate
+assimpImport :: FilePath -> IO (Either String ContextType)
+assimpImport path = (liftM . liftM) (convert path) $ importFile path Triangulate
 
-convert :: Scene -> ContextType
-convert scene =
+convert :: FilePath -> Scene -> ContextType
+convert file scene =
   let cams    = cameras scene
-      width   = 200
-      height  = 200
-      samples = 1
       scene'  = convertScene scene
-  in Context width height samples cams scene'
+  in Context defaultOptions cams scene'
 
 convertScene :: Scene -> [Primitive ColorInfo]
 convertScene scene = listToAccelStruct $ prims ++ lights'

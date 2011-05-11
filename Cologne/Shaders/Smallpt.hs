@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 
 module Cologne.Shaders.Smallpt (
-    generatePicture
+    smallpt
   ) where
 
 import System.Random
@@ -101,46 +101,45 @@ radiance scene ray depth = do
                     rp = re / p
                     tp = tr / (1 - pp)
 
-radiance' :: (AccelStruct a (Vec3 , Vec3, ReflectionType)) =>
-             a
-          -> Ray
-          -> Int
-          -> State Int Vec3
-radiance' scene ray depth = do
-  case aIntersect scene ray of
-    Miss -> return $ Vec3 0 0 0
-    Intersection t (color, emission, rtype) nrm -> 
-      return $ color &* (abs (((direction ray) &. nrm) / ((len (direction ray)) * (len nrm))))
-
-generatePicture :: Context [Primitive ColorInfo] ColorInfo
+smallpt :: Context [Primitive ColorInfo] ColorInfo
                 -> Vector (Vector Vec3)
-generatePicture (Context w h samp cams scene) =
-  runST generatePicture'
+smallpt (Context options cams scene) =
+  runST generatePicture
   where
-    generatePicture' :: ST s (Vector (Vector Vec3))
-    generatePicture' = do
+    w = width options
+    h = height options
+    samp = samples options
+    generatePicture :: ST s (Vector (Vector Vec3))
+    generatePicture = do
       pic <- new h
       rand <- newSTRef 17
       forM_ [0..(h-1)] $ \row -> do
         vec <- new w
         forM_ [0..(w-1)] $ \column -> do
           randN <- readSTRef rand
-          let (val, nextRand) = runState (sequence $ replicate samp (radiance' scene (ray column row) 0)) randN
+          let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (ray column row) 0)) randN
           writeSTRef rand nextRand
           write vec column (avgColor val)
         unsafeFreeze vec >>= write pic row 
       unsafeFreeze pic
 
     cam = head cams
-    dir x y = (lookAt cam) 
-           &+ (deltax &* (x - (iToF w)/2)) 
-           &+ (deltay &* (y - (iToF h)/2))
-    totalx  = tan . horizontalFOV $ cam
-    totaly  = tan . (/(aspect cam)) . horizontalFOV $ cam
-    deltax  = (normalize right) &* (totalx / (iToF w))
-    deltay  = (normalize up') &* (totaly / (iToF h))
-    right   = normalize $ (lookAt cam) &^ (up cam)
-    up'     = normalize $ right &^ (lookAt cam)
-    -- ray x y = Ray ((position cam) &+ ((d x y) &! 140.0)) (normalize (d x y))
-    ray x y = Ray (position cam) (normalize (dir (iToF x) (iToF y)))
-    iToF = fromInteger . toInteger
+    dir x y = (cx &* (((fromIntegral x) / fromIntegral w) - 0.5))
+        &+ (cy &* (((fromIntegral y) / fromIntegral h) - 0.5))
+        &+ (lookAt cam)
+    ray x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
+    cx = Vec3 (0.5135 * fromIntegral w / fromIntegral h) 0 0
+    cy = normalize (cx &^ (lookAt cam)) &* 0.5135
+
+    -- dir x y = (lookAt cam) 
+    --        &+ (deltax &* (x - (iToF w)/2)) 
+    --        &+ (deltay &* (y - (iToF h)/2))
+    -- totalx  = tan . horizontalFOV $ cam
+    -- totaly  = tan . (/(aspect cam)) . horizontalFOV $ cam
+    -- deltax  = (normalize right) &* (totalx / (iToF w))
+    -- deltay  = (normalize up') &* (totaly / (iToF h))
+    -- right   = normalize $ (lookAt cam) &^ (up cam)
+    -- up'     = normalize $ right &^ (lookAt cam)
+    -- -- ray x y = Ray ((position cam) &+ ((d x y) &! 140.0)) (normalize (d x y))
+    -- ray x y = Ray (position cam) (normalize (dir (iToF x) (iToF y)))
+    -- iToF = fromInteger . toInteger

@@ -1,9 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-
 {-
  - Primitives:
  -   Sphere
- -   *Triangle
+ -   Triangle
  -   *Plane
  -
  - Rendering Methods:
@@ -25,7 +23,7 @@
 
 module Main where
 
-import Prelude hiding (mapM_, zip, length)
+import Prelude hiding (mapM_, zip, length, read)
 import Control.Monad hiding (mapM_)
 import Control.Monad.State hiding (mapM_)
 import System.Console.CmdArgs
@@ -33,12 +31,15 @@ import Graphics.GD
 import System.IO
 import Data.Vector (Vector, mapM_, zip, (!), length)
 import Data.Vect (Vec3(Vec3))
+import Data.List (isSuffixOf)
 
 import Cologne.Primitives
---import Cologne.Accel.KdTree
 import Cologne.Accel.List
-import Cologne.Shaders.Smallpt
+
+import Cologne.Shaders
+
 import Cologne.AssimpImport
+import Cologne.ParseNFF
 
 saveImage :: Vector (Vector Vec3) -> Image -> FilePath -> IO ()
 saveImage picture image imageName = do
@@ -56,33 +57,35 @@ saveImage picture image imageName = do
     width = length (picture ! 0)
 
 tell :: Int -> Int -> IO ()
-tell x len = hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 /
+tell x len = whenNormal $ hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 /
            toFloat len) ++ "%       ")
   where toFloat :: Int -> Float
         toFloat = fromInteger . toInteger
 
-data Options = Options {
-    oWidth   :: Int
-  , oHeight  :: Int
-  , oInput   :: String
-  , oSamples :: Int
-  } deriving (Data, Typeable)
+userOptions :: Mode (CmdArgs Options)
+userOptions = cmdArgsMode defaultOptions
 
-options :: Mode (CmdArgs Options)
-options = cmdArgsMode $ Options {
-    oWidth   = 100 &= name "x" &= help "Width of image"
-  , oHeight  = 100 &= name "y" &= help "Height of image"
-  , oInput   = "cornell.col"   &= args &= typ "Input File"
-  , oSamples = 100 &= help "Samples per pixel"
-  } &= summary "Cologne Ray Tracer"
+putStrLnNormal :: String -> IO ()
+putStrLnNormal = whenNormal . putStrLn
 
 main :: IO ()
 main = do
-  opts <- cmdArgsRun options
-  let inputName = oInput opts
-  putStrLn "Parsing input"
-  context <- assimpImport inputName
-  image <- newImage (200,200)
-  let picture = generatePicture context
-      output = "image.png"
-  saveImage picture image output
+  opts@(Options w h _ _ _) <- cmdArgsRun userOptions
+  putStrLnNormal $ "Parsing input"
+  readInput <- read opts
+  case readInput of
+    Left err -> putStrLn err
+    Right context -> do
+      putStrLnNormal "Rendering"
+      image <- newImage (w, h)
+      saveImage (smallpt context) image "image.png"
+  where
+    read opts@(Options _ _ _ input _) = if (".col" `isSuffixOf` input)
+                                 then parseNFF' input opts
+                                 else assimpImport input
+    parseNFF' input (Options w h s _ _) = do
+      inputContents <- readFile input
+      return $ case parseNFF inputContents input of
+        Left err -> Left err
+        Right (Context _ cams objs) -> return $ 
+          Context (Options w h s input "smallpt") cams objs
