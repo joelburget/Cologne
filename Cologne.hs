@@ -81,8 +81,7 @@ main = do
       image <- newImage (w, h)
       saveImage image "image.png" $ 
         (case ((map toLower) . shader . options) context of
-          "smallpt" -> smallpt
-          --"debug" -> debug    -- Notice we're selecting a function and 
+          "debug"   -> debug    -- Notice we're selecting a function and 
           _ -> smallpt) context -- applying it to context.
   where
     read opts@(Options _ _ _ input _) = 
