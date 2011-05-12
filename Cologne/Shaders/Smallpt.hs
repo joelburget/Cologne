@@ -8,15 +8,17 @@ module Cologne.Shaders.Smallpt (
 import System.Random
 import Control.Monad.ST
 import Data.STRef (STRef, newSTRef, readSTRef, writeSTRef)
-import Control.Monad.State
+import Control.Monad.State (State, get, put, runState)
 import Control.Applicative ((<$>))
 import Data.Vect (Vec3(Vec3), (&+), (&-), (&*), (&.), (&!), (&^), len, normalize)
 import Data.Vector.Mutable (MVector, new, read, write)
-import Data.Vector (Vector, unsafeFreeze)
+import Data.Vector (Vector, unsafeFreeze, forM_, enumFromN)
 import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up)
 
 import Cologne.Primitives hiding (intersect)
 import Cologne.AssimpImport (ColorInfo)
+
+import Debug.Trace
 
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it
@@ -106,40 +108,34 @@ smallpt :: Context [Primitive ColorInfo] ColorInfo
 smallpt (Context options cams scene) =
   runST generatePicture
   where
-    w = width options
-    h = height options
-    samp = samples options
     generatePicture :: ST s (Vector (Vector Vec3))
     generatePicture = do
       pic <- new h
       rand <- newSTRef 17
-      forM_ [0..(h-1)] $ \row -> do
+      forM_ (enumFromN 0 h) $ \row -> do
         vec <- new w
-        forM_ [0..(w-1)] $ \column -> do
+        forM_ (enumFromN 0 w) $ \column -> do
           randN <- readSTRef rand
           let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (ray column row) 0)) randN
           writeSTRef rand nextRand
           write vec column (avgColor val)
-        unsafeFreeze vec >>= write pic row 
+        unsafeFreeze vec >>= write pic row --(h-row-1)
       unsafeFreeze pic
 
+    w = width options
+    h = height options
+    samp = samples options
     cam = head cams
-    dir x y = (cx &* (((fromIntegral x) / fromIntegral w) - 0.5))
-        &+ (cy &* (((fromIntegral y) / fromIntegral h) - 0.5))
-        &+ (lookAt cam)
-    ray x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
-    cx = Vec3 (0.5135 * fromIntegral w / fromIntegral h) 0 0
-    cy = normalize (cx &^ (lookAt cam)) &* 0.5135
 
-    -- dir x y = (lookAt cam) 
-    --        &+ (deltax &* (x - (iToF w)/2)) 
-    --        &+ (deltay &* (y - (iToF h)/2))
-    -- totalx  = tan . horizontalFOV $ cam
-    -- totaly  = tan . (/(aspect cam)) . horizontalFOV $ cam
-    -- deltax  = (normalize right) &* (totalx / (iToF w))
-    -- deltay  = (normalize up') &* (totaly / (iToF h))
-    -- right   = normalize $ (lookAt cam) &^ (up cam)
-    -- up'     = normalize $ right &^ (lookAt cam)
-    -- -- ray x y = Ray ((position cam) &+ ((d x y) &! 140.0)) (normalize (d x y))
-    -- ray x y = Ray (position cam) (normalize (dir (iToF x) (iToF y)))
-    -- iToF = fromInteger . toInteger
+    dir x y = (lookAt cam) 
+           &+ (deltax &* (x - (iToF w)/2)) 
+           &+ (deltay &* (y - (iToF h)/2))
+    totalx  = tan . horizontalFOV $ cam
+    totaly  = tan . (/(aspect cam)) . horizontalFOV $ cam
+    deltax  = (normalize right) &* (totalx / (iToF w))
+    deltay  = (normalize up')   &* (totaly / (iToF h))
+    right   = normalize $ (lookAt cam) &^ (up cam)
+    up'     = normalize $ right &^ (lookAt cam)
+    ray x y = Ray ((position cam) &+ (d &* 140.0)) (normalize d)
+      where d = dir (iToF x) (iToF y)
+    iToF = fromInteger . toInteger
