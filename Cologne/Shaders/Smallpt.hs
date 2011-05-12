@@ -18,8 +18,6 @@ import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up)
 import Cologne.Primitives hiding (intersect)
 import Cologne.AssimpImport (ColorInfo)
 
-import Debug.Trace
-
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it
 -- hits, we return the color returned by the object for that particular ray.
@@ -119,7 +117,7 @@ smallpt (Context options cams scene) =
           let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (ray column row) 0)) randN
           writeSTRef rand nextRand
           write vec column (avgColor val)
-        unsafeFreeze vec >>= write pic row --(h-row-1)
+        unsafeFreeze vec >>= write pic row
       unsafeFreeze pic
 
     w = width options
