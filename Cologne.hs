@@ -32,6 +32,7 @@ import System.IO
 import Data.Vector (Vector, mapM_, zip, (!), length)
 import Data.Vect (Vec3(Vec3))
 import Data.List (isSuffixOf)
+import Data.Char (toLower)
 
 import Cologne.Primitives
 import Cologne.Accel.List
@@ -41,8 +42,8 @@ import Cologne.Shaders
 import Cologne.AssimpImport
 import Cologne.ParseNFF
 
-saveImage :: Vector (Vector Vec3) -> Image -> FilePath -> IO ()
-saveImage picture image imageName = do
+saveImage :: Image -> FilePath -> Vector (Vector Vec3) -> IO ()
+saveImage image imageName picture = do
   forM_ [0..((length picture)-1)] $ \y -> do
     forM_ [0..((width)-1)] $ \x -> do
       setOnePixel y x ((picture!y)!x)
@@ -78,14 +79,19 @@ main = do
     Right context -> do
       putStrLnNormal "Rendering"
       image <- newImage (w, h)
-      saveImage (smallpt context) image "image.png"
+      saveImage image "image.png" $ 
+        (case ((map toLower) . shader . options) context of
+          "smallpt" -> smallpt
+          --"debug" -> debug    -- Notice we're selecting a function and 
+          _ -> smallpt) context -- applying it to context.
   where
-    read opts@(Options _ _ _ input _) = if (".col" `isSuffixOf` input)
-                                 then parseNFF' input opts
-                                 else assimpImport input
-    parseNFF' input (Options w h s _ _) = do
+    read opts@(Options _ _ _ input _) = 
+      if (".col" `isSuffixOf` input)
+      then parseNFF' input opts
+      else assimpImport input
+    parseNFF' input (Options w h s _ sr) = do
       inputContents <- readFile input
       return $ case parseNFF inputContents input of
         Left err -> Left err
         Right (Context _ cams objs) -> return $ 
-          Context (Options w h s input "smallpt") cams objs
+          Context (Options w h s input sr) cams objs
