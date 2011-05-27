@@ -25,7 +25,6 @@ module Main where
 
 import Prelude hiding (mapM_, zip, length, read)
 import Control.Monad hiding (mapM_)
-import Control.Monad.State hiding (mapM_)
 import System.Console.CmdArgs
 import Graphics.GD
 import System.IO
@@ -36,6 +35,7 @@ import Data.Char (toLower)
 
 import Cologne.Primitives
 import Cologne.Accel.List
+--import Cologne.Accel.KdTree
 
 import Cologne.Shaders
 
@@ -66,31 +66,30 @@ tell x len = whenNormal $ hPutStr stderr ("\r" ++ show (toFloat (x+1) * 100 /
 userOptions :: Mode (CmdArgs Options)
 userOptions = cmdArgsMode defaultOptions
 
+-- Only outputs if `verbosity` is set to Normal or Loud, not Quiet
 putStrLnNormal :: String -> IO ()
 putStrLnNormal = whenNormal . putStrLn
 
 main :: IO ()
 main = do
-  opts@(Options w h _ _ _) <- cmdArgsRun userOptions
+  opts <- cmdArgsRun userOptions
   putStrLnNormal $ "Parsing input"
   readInput <- read opts
   case readInput of
     Left err -> putStrLn err
     Right context -> do
       putStrLnNormal "Rendering"
-      image <- newImage (w, h)
+      image <- newImage (width opts, height opts)
       saveImage image "image.png" $ 
         (case ((map toLower) . shader . options) context of
           "debug"   -> debug    -- Notice we're selecting a function and 
           _ -> smallpt) context -- applying it to context.
   where
-    read opts@(Options _ _ _ input _) = 
-      if (".col" `isSuffixOf` input)
-      then parseNFF' input opts
-      else assimpImport input
-    parseNFF' input (Options w h s _ sr) = do
-      inputContents <- readFile input
-      return $ case parseNFF inputContents input of
-        Left err -> Left err
-        Right (Context _ cams objs) -> return $ 
-          Context (Options w h s input sr) cams objs
+    read :: Options -> IO (Either String ContextType)
+    read opts =
+      (liftM . liftM) convert $
+        if (".col" `isSuffixOf` indata)
+        then liftM (flip parseNFF indata) (readFile indata)
+        else assimpImport indata
+      where convert context = context {options = opts}
+            indata = input opts

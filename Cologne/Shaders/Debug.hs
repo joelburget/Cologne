@@ -10,7 +10,8 @@ import Control.Monad.State (State, runState)
 import Data.Vect (Vec3(Vec3), (&+), (&*), (&.), (&^), len, normalize)
 import Data.Vector.Mutable (MVector, new, read, write)
 import Data.Vector (Vector, unsafeFreeze, forM_, enumFromN)
-import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up)
+import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up, 
+  Camera(Camera))
 
 import Cologne.Primitives hiding (intersect)
 import Cologne.AssimpImport (ColorInfo)
@@ -46,7 +47,9 @@ debug (Context options cams scene) = runST generatePicture
     w = width options
     h = height options
     samp = samples options
-    cam = head cams
+    cam | length cams > 0 = head cams
+        | otherwise       = Camera "" (Vec3 0 0 500) (Vec3 0 1 0) 
+                                   (Vec3 0 0.1 (-1)) 0.5 1e-2 1e5 1
     dir x y = (cx &* (((fromIntegral x) / fromIntegral w) - 0.5))
            &+ (cy &* (((fromIntegral y) / fromIntegral h) - 0.5))
            &+ (lookAt cam)

@@ -21,7 +21,7 @@ type ColorInfo = (Vec3, Vec3, ReflectionType)
 type ContextType = Context [Primitive ColorInfo] ColorInfo
 
 assimpImport :: FilePath -> IO (Either String ContextType)
-assimpImport path = (liftM . liftM) (convert path) $ importFile path Triangulate
+assimpImport path = (liftM . liftM) (convert path) $ importFile path [Triangulate]
 
 convert :: FilePath -> Scene -> ContextType
 convert file scene =
