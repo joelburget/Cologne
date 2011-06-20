@@ -1,0 +1,26 @@
+body {
+  background-color: #f0f2eb;
+  color: #333;
+}
+
+pre {
+  border: 3px solid #aaa;
+  background-color: #1e2426;
+  color: #aaa;
+  -webkit-border-radius: 3px;
+}
+
+/* Colors from rdark.vim */
+
+code.sourceCode span.kw { color: #729fcf;} /* keyword */
+code.sourceCode span.dt { color: #8ae234;} /* type */
+code.sourceCode span.dv { color: #fcaf3e;} /* number */
+code.sourceCode span.bn { color: #2e3436;}
+code.sourceCode span.fl { color: #2e34e6;}
+code.sourceCode span.ch { color: #729fcf;}
+code.sourceCode span.st { color: #888a85;}
+code.sourceCode span.co { color: #656763;} /* comment */
+code.sourceCode span.ot { color: #729fcf;} /* type symbol */
+code.sourceCode span.al { color: #1e2426;}
+code.sourceCode span.fu { color: #729fcf;} /* code symbol */
+code.sourceCode span.er { color: #2c3032;}
