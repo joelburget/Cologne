@@ -30,7 +30,7 @@ radiance scene ray _ = do
       color &* (abs (((direction ray) &. nrm) / ((len (direction ray)) * (len nrm))))
 
 debug :: Context [Primitive ColorInfo] ColorInfo
-                -> Vector (Vector Vec3)
+                -> Array DIM3 Word8
 debug (Context options cams scene) = runST generatePicture
   where
     generatePicture :: ST s (Vector (Vector Vec3))

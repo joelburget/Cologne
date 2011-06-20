@@ -17,6 +17,7 @@ import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up)
 
 import Cologne.Primitives hiding (intersect)
 import Cologne.AssimpImport (ColorInfo)
+import Cologne.Lens (runLens, standardLens)
 
 -- To compute the radiance of a ray shot into the scene we check to see if the
 -- ray intersects an object. If it misses all objects we return black, if it
@@ -114,7 +115,7 @@ smallpt (Context options cams scene) =
         vec <- new w
         forM_ (enumFromN 0 w) $ \column -> do
           randN <- readSTRef rand
-          let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (ray column row) 0)) randN
+          let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (dir column row) 0)) randN
           writeSTRef rand nextRand
           write vec column (avgColor val)
         unsafeFreeze vec >>= write pic row
@@ -125,15 +126,4 @@ smallpt (Context options cams scene) =
     samp = samples options
     cam = head cams
 
-    dir x y = (lookAt cam) 
-           &+ (deltax &* (x - (iToF w)/2)) 
-           &+ (deltay &* (y - (iToF h)/2))
-    totalx  = tan . horizontalFOV $ cam
-    totaly  = tan . (/(aspect cam)) . horizontalFOV $ cam
-    deltax  = (normalize right) &* (totalx / (iToF w))
-    deltay  = (normalize up')   &* (totaly / (iToF h))
-    right   = normalize $ (lookAt cam) &^ (up cam)
-    up'     = normalize $ right &^ (lookAt cam)
-    ray x y = Ray ((position cam) &+ (d &* 140.0)) (normalize d)
-      where d = dir (iToF x) (iToF y)
-    iToF = fromInteger . toInteger
+    dir x y = runLens standardLens cam w h x y 0 0

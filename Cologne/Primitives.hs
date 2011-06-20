@@ -34,7 +34,6 @@ import Data.List (foldl1')
 import Data.Vect.Float (Vec3(Vec3), (&+), (&*))
 import Graphics.Formats.Assimp (Camera)
 import System.Console.CmdArgs
-import Data.Vector (Vector)
   
 data Ray = Ray {
     origin    :: !Vec3
