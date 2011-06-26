@@ -20,6 +20,7 @@ import Cologne.AssimpImport (ColorInfo)
 
 -- Just return the color we intersect multiplied by the cosine of the angle of
 -- intersection.
+{-# INLINE radiance #-}
 radiance :: (AccelStruct a (Vec3 , Vec3, ReflectionType))
          => a
          -> Ray
@@ -39,18 +40,17 @@ debug (Context options cams scene) = fromVector (Z :. w :. h :. 4) $ runST gener
     generatePicture = do
       pic <- new (w * h * 4) -- The 4 comes from the 4 channels of rgba
       forM_ (enumFromN 0 h) $ \row -> do
-        -- vec <- new w
         forM_ (enumFromN 0 w) $ \column -> do
-          let (Vec3 r g b) = radiance scene (ray column row) 0
-              ind = (row*w + column)*4
-          -- write vec column val
-          write pic (ind + 0) $ round (r*255)
-          write pic (ind + 1) $ round (g*255)
-          write pic (ind + 2) $ round (b*255)
-          write pic (ind + 3) $ 255
-        -- unsafeFreeze vec >>= write pic (h-row-1)
-        -- write pic (h-row-1)
+          writePixel pic row column (radiance scene (ray column row) 0)
       unsafeFreeze pic
+
+    writePixel pic row column (Vec3 r g b) =
+      let index = (row*w + column)*4
+      in do
+        write pic (index + 0) $ round (r*255)
+        write pic (index + 1) $ round (g*255)
+        write pic (index + 2) $ round (b*255)
+        write pic (index + 3) $ 255
 
     w = width options
     h = height options
