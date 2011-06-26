@@ -11,5 +11,5 @@ Cabal-Version:    >=1.2
 
 Executable cologne
   Main-Is:        Cologne.hs
-  Build-Depends:  base >= 3 && < 5, haskell98, mtl, cmdargs == 0.7, parallel, random, parsec, assimp, vect, repa, repa-devil >= 0.1.1
+  Build-Depends:  base >= 3 && < 5, haskell98, mtl, cmdargs == 0.7, parallel, random, parsec, assimp, vector, vect, repa, repa-devil >= 0.1.1
   ghc-options:    -funbox-strict-fields -ignore-package monads-fd -Wall

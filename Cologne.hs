@@ -59,8 +59,9 @@ main = do
       putStrLnNormal "Rendering"
       runIL $ writeImage "image.png" $
         (case ((map toLower) . shader . options) context of
-          "debug"   -> debug            -- Notice we're selecting a function and
-          _         -> smallpt) context -- applying it to context.
+          _ -> debug) context
+          --"debug"   -> debug            -- Notice we're selecting a function and
+          --_         -> smallpt) context -- applying it to context.
   where
     read :: Options -> IO (Either String ContextType)
     read opts =

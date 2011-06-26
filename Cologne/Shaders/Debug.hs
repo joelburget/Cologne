@@ -5,24 +5,26 @@ module Cologne.Shaders.Debug (
   ) where
 
 import Control.Monad.ST
+import Data.Word
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Control.Monad.State (State, runState)
 import Data.Vect (Vec3(Vec3), (&+), (&*), (&.), (&^), len, normalize)
-import Data.Vector.Mutable (MVector, new, read, write)
-import Data.Vector (Vector, unsafeFreeze, forM_, enumFromN)
+import Data.Vector.Unboxed (Vector, unsafeFreeze, enumFromN, forM_)
+import Data.Vector.Unboxed.Mutable (MVector, new, read, write)
+import Data.Array.Repa
 import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up, 
   Camera(Camera))
 
-import Cologne.Primitives hiding (intersect)
+import Cologne.Primitives hiding (intersect, Z)
 import Cologne.AssimpImport (ColorInfo)
 
 -- Just return the color we intersect multiplied by the cosine of the angle of
 -- intersection.
-radiance :: (AccelStruct a (Vec3 , Vec3, ReflectionType)) =>
-             a
-          -> Ray
-          -> Int
-          -> Vec3
+radiance :: (AccelStruct a (Vec3 , Vec3, ReflectionType))
+         => a
+         -> Ray
+         -> Int
+         -> Vec3
 radiance scene ray _ = do
   case aIntersect scene ray of
     Miss -> Vec3 0 0 0
@@ -30,18 +32,24 @@ radiance scene ray _ = do
       color &* (abs (((direction ray) &. nrm) / ((len (direction ray)) * (len nrm))))
 
 debug :: Context [Primitive ColorInfo] ColorInfo
-                -> Array DIM3 Word8
-debug (Context options cams scene) = runST generatePicture
+      -> Array DIM3 Word8
+debug (Context options cams scene) = fromVector (Z :. w :. h :. 4) $ runST generatePicture
   where
-    generatePicture :: ST s (Vector (Vector Vec3))
+    generatePicture :: ST s (Vector Word8)
     generatePicture = do
-      pic <- new h
+      pic <- new (w * h * 4) -- The 4 comes from the 4 channels of rgba
       forM_ (enumFromN 0 h) $ \row -> do
-        vec <- new w
+        -- vec <- new w
         forM_ (enumFromN 0 w) $ \column -> do
-          let val = radiance scene (ray column row) 0
-          write vec column val
-        unsafeFreeze vec >>= write pic (h-row-1)
+          let (Vec3 r g b) = radiance scene (ray column row) 0
+              ind = (row*w + column)*4
+          -- write vec column val
+          write pic (ind + 0) $ round (r*255)
+          write pic (ind + 1) $ round (g*255)
+          write pic (ind + 2) $ round (b*255)
+          write pic (ind + 3) $ 255
+        -- unsafeFreeze vec >>= write pic (h-row-1)
+        -- write pic (h-row-1)
       unsafeFreeze pic
 
     w = width options
