@@ -5,11 +5,11 @@ License:          BSD3
 License-file:     LICENSE
 Author:           Joel Burget
 Maintainer:       joelburget@gmail.com
-Homepage:         http://programsthatsmellgood.com/cologne/
+Homepage:         http://joelburget.com/cologne/
 Build-Type:       Simple
 Cabal-Version:    >=1.2
 
 Executable cologne
   Main-Is:        Cologne.hs
-  Build-Depends:  base >= 3 && < 5, haskell98, mtl, cmdargs == 0.7, parallel, random, parsec, assimp, vector, vect, repa, repa-devil >= 0.1.1
-  ghc-options:    -funbox-strict-fields -ignore-package monads-fd -Wall
+  Build-Depends:  base >= 3 && < 5, mtl, cmdargs == 0.9, parallel, mwc-random, parsec, assimp, vector, vect, GLURaw, OpenGLRaw, GLFW-b, BoundedChan, bytestring, random
+  ghc-options:    -funbox-strict-fields -ignore-package monads-fd -Wall -threaded -rtsopts

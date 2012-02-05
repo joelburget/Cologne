@@ -5,15 +5,17 @@ module Cologne.Shaders.Smallpt (
     smallpt
   ) where
 
-import System.Random
 import Control.Monad.ST
-import Data.STRef (STRef, newSTRef, readSTRef, writeSTRef)
-import Control.Monad.State (State, get, put, runState)
+import Control.Monad.State (State, get, put, runState, evalState)
 import Control.Applicative ((<$>))
+import System.Random
+import System.Random.MWC (Seed, restore, uniform)
+import Data.STRef (STRef, newSTRef, readSTRef, writeSTRef)
 import Data.Vect (Vec3(Vec3), (&+), (&-), (&*), (&.), (&!), (&^), len, normalize)
 import Data.Vector.Mutable (MVector, new, read, write)
 import Data.Vector (Vector, unsafeFreeze, forM_, enumFromN)
-import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up)
+import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up, 
+  Camera(Camera))
 
 import Cologne.Primitives hiding (intersect)
 import Cologne.AssimpImport (ColorInfo)
@@ -103,27 +105,49 @@ radiance scene ray depth = do
                     tp = tr / (1 - pp)
 
 smallpt :: Context [Primitive ColorInfo] ColorInfo
-                -> Vector (Vector Vec3)
-smallpt (Context options cams scene) =
-  runST generatePicture
-  where
-    generatePicture :: ST s (Vector (Vector Vec3))
-    generatePicture = do
-      pic <- new h
-      rand <- newSTRef 17
-      forM_ (enumFromN 0 h) $ \row -> do
-        vec <- new w
-        forM_ (enumFromN 0 w) $ \column -> do
-          randN <- readSTRef rand
-          let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (dir column row) 0)) randN
-          writeSTRef rand nextRand
-          write vec column (avgColor val)
-        unsafeFreeze vec >>= write pic row
-      unsafeFreeze pic
+       -> Int
+       -> Int
+       -> Seed
+       -> Vec3
+smallpt (Context options cams scene) column row seed =
+  evalState (radiance scene (ray options cams column row) 0) rand
+  where rand = runST $ restore seed >>= uniform
 
+ray :: Options -> [Camera] -> Int -> Int -> Ray
+ray options cams x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
+  where
     w = width options
     h = height options
-    samp = samples options
-    cam = head cams
-
-    dir x y = runLens standardLens cam w h x y 0 0
+    cam | length cams > 0 = head cams
+        | otherwise       = Camera "" (Vec3 0 0 500) (Vec3 0 1 0) 
+                                   (Vec3 0 0.1 (-1)) 0.5 1e-2 1e5 1
+    dir x y = (cx &* (((fromIntegral x) / fromIntegral w) - 0.5))
+           &+ (cy &* (((fromIntegral y) / fromIntegral h) - 0.5))
+           &+ (lookAt cam)
+    cx = Vec3 (0.5135 * fromIntegral w / fromIntegral h) 0 0
+    cy = normalize (cx &^ (lookAt cam)) &* 0.5135
+-- smallpt :: Context [Primitive ColorInfo] ColorInfo
+--                 -> Vector (Vector Vec3)
+-- smallpt (Context options cams scene) =
+--   runST generatePicture
+--   where
+--     generatePicture :: ST s (Vector (Vector Vec3))
+--     generatePicture = do
+--       pic <- new h
+--       rand <- newSTRef 17
+--       forM_ (enumFromN 0 h) $ \row -> do
+--         vec <- new w
+--         forM_ (enumFromN 0 w) $ \column -> do
+--           randN <- readSTRef rand
+--           let (val, nextRand) = runState (sequence $ replicate samp (radiance scene (dir column row) 0)) randN
+--           writeSTRef rand nextRand
+--           write vec column (avgColor val)
+--         unsafeFreeze vec >>= write pic row
+--       unsafeFreeze pic
+-- 
+--     w = width options
+--     h = height options
+--     samp = samples options
+--     cam = head cams
+-- 
+--     dir x y = runLens standardLens cam w h x y 0 0

@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Cologne.Accel.KdTree where
+module Cologne.Accel.KdTree () where
 {- This code could use a lot of optimizations. The main problem is the way it
  - builds the tree. It just splits the objects in the middle. Ideally we would
  - use a heuristic, eg binned SAH.

@@ -1,12 +1,9 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Cologne.Primitives (
     Primitive(Primitive)
@@ -101,8 +98,8 @@ bboxIntersect (Bbox (Vec3 x1 y1 z1) (Vec3 x2 y2 z2))
     lastin      = max inx  (max iny  inz)
     firstout    = min outx (min outy outz)
 
-data Primitive a = Primitive {
-
+data Primitive a = Primitive
+  {
   -- | Test for intersection between the ray and the primitive
     intersect :: Ray -> Maybe Float
 
@@ -129,7 +126,7 @@ data Primitive a = Primitive {
 instance Show (Primitive a) where
   show = const "prim"
 
-{- This is the AccelStruct typeclass, which is used to store and interact with
+{- AccelStruct is used to store and interact with
  - the primitives of a scene. This can result in huge speedups because rather
  - than checking for intersection with every primitive in a scene (O(n)) we can
  - reduce the complexity to O(lg(n)).
@@ -141,26 +138,29 @@ class AccelStruct a b | a -> b where
   aIntersect        :: a -> Ray -> Intersection b
   listToAccelStruct :: [Primitive b] -> a
 
-data Options = Options {
-    width   :: Int    -- ^ Width in Pixels
+data Options = Options
+  { width   :: Int    -- ^ Width in Pixels
   , height  :: Int    -- ^ Height in Pixels
   , samples :: Int    -- ^ Samples to take
+  , threads :: Int    -- ^ Number of worker threads
   , input   :: String -- ^ Name of the input file
   , shader  :: String -- ^ Name of the shader to use
   } deriving (Data, Typeable)
 
-defaultOptions = Options {
-    width   = 250 &= name "w" &= help "Width of image"
+defaultOptions :: Options
+defaultOptions = Options
+  { width   = 250 &= name "w" &= help "Width of image"
   , height  = 250 &= name "h" &= help "Height of image"
   , samples = 100 &= help "Samples per pixel"
+  , threads = 2   &= name "t" &= help "Number of threads"
   , input   = "cornell.col"   &= args &= typ "Input File"
   , shader  = "smallpt" &= help "Name of the shader to use"
   } &= summary "Cologne Ray Tracer v0.2 (c) Joel Burget 2010-2011" &= verbosity
 
-data (AccelStruct a b) => Context a b = Context { 
-    options :: Options
-  , cameras :: [Camera]    -- ^ List of cameras. Only the first is currently used.
-  , scene   :: a           -- ^ Scene Primitive
+data (AccelStruct a b) => Context a b = Context
+  { options :: Options
+  , cameras :: [Camera] -- ^ List of cameras. Only the first is currently used.
+  , scene   :: a        -- ^ Scene Primitive
   }
 
 avgColor :: [Vec3] -> Vec3

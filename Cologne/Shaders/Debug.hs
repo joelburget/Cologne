@@ -5,13 +5,12 @@ module Cologne.Shaders.Debug (
   ) where
 
 import Control.Monad.ST
+import System.Random.MWC (Seed)
 import Data.Word
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
-import Control.Monad.State (State, runState)
 import Data.Vect (Vec3(Vec3), (&+), (&*), (&.), (&^), len, normalize)
 import Data.Vector.Unboxed (Vector, unsafeFreeze, enumFromN, forM_)
 import Data.Vector.Unboxed.Mutable (MVector, new, read, write)
-import Data.Array.Repa
 import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up, 
   Camera(Camera))
 
@@ -33,34 +32,43 @@ radiance scene ray _ = do
       color &* (abs (((direction ray) &. nrm) / ((len (direction ray)) * (len nrm))))
 
 debug :: Context [Primitive ColorInfo] ColorInfo
-      -> Array DIM3 Word8
-debug (Context options cams scene) = fromVector (Z :. w :. h :. 4) $ runST generatePicture
+       -> Int
+       -> Int
+       -> Seed
+       -> Vec3
+debug (Context options cams scene) column row _ = 
+  radiance scene (ray options cams column row) 0
+
+--debug :: Context [Primitive ColorInfo] ColorInfo
+--      -> Array DIM3 Word8
+--debug (Context options cams scene) = fromVector (Z :. w :. h :. 4) $ runST generatePicture
+--  where
+--    generatePicture :: ST s (Vector Word8)
+--    generatePicture = do
+--      pic <- new (w * h * 4) -- The 4 comes from the 4 channels of rgba
+--      forM_ (enumFromN 0 h) $ \row -> do
+--        forM_ (enumFromN 0 w) $ \column -> do
+--          writePixel pic row column (radiance scene (ray options column row) 0)
+--      unsafeFreeze pic
+--
+--    writePixel pic row column (Vec3 r g b) =
+--      let index = (row*w + column)*4
+--      in do
+--        write pic (index + 0) $ round (r*255)
+--        write pic (index + 1) $ round (g*255)
+--        write pic (index + 2) $ round (b*255)
+--        write pic (index + 3) $ 255
+
+ray :: Options -> [Camera] -> Int -> Int -> Ray
+ray options cams x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
   where
-    generatePicture :: ST s (Vector Word8)
-    generatePicture = do
-      pic <- new (w * h * 4) -- The 4 comes from the 4 channels of rgba
-      forM_ (enumFromN 0 h) $ \row -> do
-        forM_ (enumFromN 0 w) $ \column -> do
-          writePixel pic row column (radiance scene (ray column row) 0)
-      unsafeFreeze pic
-
-    writePixel pic row column (Vec3 r g b) =
-      let index = (row*w + column)*4
-      in do
-        write pic (index + 0) $ round (r*255)
-        write pic (index + 1) $ round (g*255)
-        write pic (index + 2) $ round (b*255)
-        write pic (index + 3) $ 255
-
     w = width options
     h = height options
-    samp = samples options
     cam | length cams > 0 = head cams
         | otherwise       = Camera "" (Vec3 0 0 500) (Vec3 0 1 0) 
                                    (Vec3 0 0.1 (-1)) 0.5 1e-2 1e5 1
     dir x y = (cx &* (((fromIntegral x) / fromIntegral w) - 0.5))
            &+ (cy &* (((fromIntegral y) / fromIntegral h) - 0.5))
            &+ (lookAt cam)
-    ray x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
     cx = Vec3 (0.5135 * fromIntegral w / fromIntegral h) 0 0
     cy = normalize (cx &^ (lookAt cam)) &* 0.5135
