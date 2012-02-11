@@ -10,6 +10,7 @@ import Control.Monad.State (State, get, put, runState, evalState)
 import Control.Applicative ((<$>))
 import System.Random
 import System.Random.MWC (Seed, restore, uniform)
+import Data.Lens ((^$!))
 import Data.STRef (STRef, newSTRef, readSTRef, writeSTRef)
 import Data.Vect (Vec3(Vec3), (&+), (&-), (&*), (&.), (&!), (&^), len, normalize)
 import Data.Vector.Mutable (MVector, new, read, write)
@@ -104,20 +105,29 @@ radiance scene ray depth = do
                     rp = re / p
                     tp = tr / (1 - pp)
 
+-- smallpt :: Context [Primitive ColorInfo] ColorInfo
+--        -> Int
+--        -> Int
+--        -> Seed
+--        -> Vec3
+-- smallpt (Context options cams scene) column row seed =
+--   evalState (radiance scene (ray options cams column row) 0) rand
+--   where rand = runST $ restore seed >>= uniform
+
 smallpt :: Context [Primitive ColorInfo] ColorInfo
        -> Int
        -> Int
        -> Seed
        -> Vec3
-smallpt (Context options cams scene) column row seed =
-  evalState (radiance scene (ray options cams column row) 0) rand
+smallpt (Context options cams scene) column row seed = avgColor lst
   where rand = runST $ restore seed >>= uniform
+        lst = evalState (sequence $ replicate (samples ^$! options) (radiance scene (ray options cams column row) 0)) rand
 
 ray :: Options -> [Camera] -> Int -> Int -> Ray
 ray options cams x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
   where
-    w = width options
-    h = height options
+    w = width  ^$! options
+    h = height ^$! options
     cam | length cams > 0 = head cams
         | otherwise       = Camera "" (Vec3 0 0 500) (Vec3 0 1 0) 
                                    (Vec3 0 0.1 (-1)) 0.5 1e-2 1e5 1

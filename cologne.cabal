@@ -10,6 +10,24 @@ Build-Type:       Simple
 Cabal-Version:    >=1.2
 
 Executable cologne
-  Main-Is:        Cologne.hs
-  Build-Depends:  base >= 3 && < 5, mtl, cmdargs == 0.9, parallel, mwc-random, parsec, assimp, vector, vect, GLURaw, OpenGLRaw, GLFW-b, BoundedChan, bytestring, random
-  ghc-options:    -funbox-strict-fields -ignore-package monads-fd -Wall -threaded -rtsopts
+  Main-Is: Cologne.hs
+  Build-Depends:
+    base               >= 3     && < 5,
+    mtl                == 2.0.*,
+    cmdargs            == 0.9.*,
+    parallel           == 3.2.*,
+    mwc-random         >= 0.11  && < 1,
+    parsec             == 3.1.*,
+    assimp,
+    vector             >= 0.9,
+    vect               == 0.4.*,
+    GLURaw             == 1.1.*,
+    OpenGLRaw          == 1.1.*,
+    GLFW-b             == 0.1.*,
+    BoundedChan        == 1.0.*,
+    bytestring         == 0.9.*,
+    random,
+    data-lens          == 2.0.*,
+    data-lens-template >= 2.0   && < 2.2,
+    data-lens-fd       == 2.0.*
+  ghc-options: -funbox-strict-fields -ignore-package monads-fd -Wall -threaded -rtsopts

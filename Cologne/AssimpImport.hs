@@ -1,6 +1,6 @@
 module Cologne.AssimpImport where
 
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Control.Monad (liftM)
 import Data.Vect (Vec3(Vec3), (&*), (&^))
 
@@ -40,7 +40,7 @@ convertScene scene = listToAccelStruct $ prims ++ lights'
                                 (Vec3 0 0 0, Vec3 1 1 1, Diffuse)
 
     convertMesh :: Mesh -> [Primitive ColorInfo]
-    convertMesh mesh = catMaybes $ map (convertFace (vertices mesh)) (faces mesh)
+    convertMesh mesh = mapMaybe (convertFace (vertices mesh)) (faces mesh)
 
     convertFace :: [Vec3] -> Face -> Maybe (Primitive ColorInfo)
     convertFace vert face =
@@ -48,6 +48,6 @@ convertScene scene = listToAccelStruct $ prims ++ lights'
       then Just $ triangle x y z (Vec3 1 1 1, Vec3 0 0 0, Diffuse)
       else Nothing
       where ind = indices face
-            x = vert !! (fromIntegral $ ind !! 0)
-            y = vert !! (fromIntegral $ ind !! 1)
-            z = vert !! (fromIntegral $ ind !! 2)
+            x = vert !! fromIntegral (ind !! 0)
+            y = vert !! fromIntegral (ind !! 1)
+            z = vert !! fromIntegral (ind !! 2)

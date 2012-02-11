@@ -76,7 +76,7 @@ light =
   <* spaces
   where light' x y z r g b = S.sphere (Vec3 x y z) 
                                       0.0000001 
-                                      ((Vec3 0 0 0), (Vec3 r g b), Diffuse)
+                                      (Vec3 0 0 0, Vec3 r g b, Diffuse)
 
 {- sphere
  - format: s %g       %g       %g       %g
@@ -97,7 +97,7 @@ sphere =
   char 's' *> spaces *> 
     (sph <$> float <*> float <*> float <*> float <*> getState) 
     <* spaces
-  where sph x y z r c = S.sphere (Vec3 x y z) r c
+  where sph x y z = S.sphere (Vec3 x y z)
 
 {- color
  - format f %g %g %g %g %g %g %s
@@ -149,7 +149,7 @@ viewpoint = do
 file :: ObjParser ContextType
 file = do
   (at, look)  <- viewpoint
-  objs        <- many $ (skipMany color) *> objects
+  objs        <- many $ skipMany color *> objects
   eof
   let camera = Camera "" at (Vec3 0 0 1) look 60 1 1000000000 1
   pos <- getPosition
@@ -158,5 +158,5 @@ file = do
 
 parseNFF :: String -> String -> 
             Either String ContextType
-parseNFF input filename = (flip left) (runParser file noState filename input) show
-  where noState = ((Vec3 0 0 0), (Vec3 0 0 0), (Diffuse))
+parseNFF input filename = left show $ runParser file noState filename input
+  where noState = (Vec3 0 0 0, Vec3 0 0 0, Diffuse)

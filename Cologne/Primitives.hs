@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cologne.Primitives (
     Primitive(Primitive)
@@ -21,16 +22,27 @@ module Cologne.Primitives (
   , AccelStruct(..)
   , ReflectionType(..)
   , Options(..)
+  , width
+  , height
+  , samples
+  , threads
+  , input
+  , shader
   , defaultOptions
   , Context(..)
+  , options
+  , cameras
+  , scene
   , avgColor
   , toInt
   ) where
 
 import Data.List (foldl1')
 import Data.Vect.Float (Vec3(Vec3), (&+), (&*))
-import Graphics.Formats.Assimp (Camera)
+import Data.Lens.Template (makeLenses)
 import System.Console.CmdArgs
+
+import Graphics.Formats.Assimp (Camera)
   
 data Ray = Ray {
     origin    :: !Vec3
@@ -89,7 +101,7 @@ bbox xs = Bbox smallest largest
 bboxIntersect :: Bbox -> Ray -> Bool
 bboxIntersect (Bbox (Vec3 x1 y1 z1) (Vec3 x2 y2 z2)) 
               (Ray (Vec3 ox oy oz) (Vec3 dx dy dz)) =
-  if lastin > firstout || firstout < 0 then False else True
+  lastin <= firstout && firstout >= 0
     where
     (inx, outx) = (if dx > 0 then id else rev) ((x1-ox)/dx, (x2-ox)/dx)
     (iny, outy) = (if dy > 0 then id else rev) ((y1-oy)/dy, (y2-oy)/dy)
@@ -139,33 +151,32 @@ class AccelStruct a b | a -> b where
   listToAccelStruct :: [Primitive b] -> a
 
 data Options = Options
-  { width   :: Int    -- ^ Width in Pixels
-  , height  :: Int    -- ^ Height in Pixels
-  , samples :: Int    -- ^ Samples to take
-  , threads :: Int    -- ^ Number of worker threads
-  , input   :: String -- ^ Name of the input file
-  , shader  :: String -- ^ Name of the shader to use
+  { _width   :: Int    -- ^ Width in Pixels
+  , _height  :: Int    -- ^ Height in Pixels
+  , _samples :: Int    -- ^ Samples per pixel
+  , _threads :: Int    -- ^ Number of worker threads
+  , _input   :: String -- ^ Name of the input file
+  , _shader  :: String -- ^ Name of the shader to use
   } deriving (Data, Typeable)
 
 defaultOptions :: Options
 defaultOptions = Options
-  { width   = 250 &= name "w" &= help "Width of image"
-  , height  = 250 &= name "h" &= help "Height of image"
-  , samples = 100 &= help "Samples per pixel"
-  , threads = 2   &= name "t" &= help "Number of threads"
-  , input   = "cornell.col"   &= args &= typ "Input File"
-  , shader  = "smallpt" &= help "Name of the shader to use"
+  { _width   = 250 &= name "w" &= name "width"  &= help "Width of image"
+  , _height  = 250 &= name "h" &= name "height" &= help "Height of image"
+  , _samples = 100 &= name "samples" &= help "Samples per pixel"
+  , _threads = 2   &= name "t" &= name "threads" &= help "Number of threads"
+  , _input   = "cornell.col"   &= args &= typ "Input File"
+  , _shader  = "debug" &= name "shader" &= help "Name of the shader to use"
   } &= summary "Cologne Ray Tracer v0.2 (c) Joel Burget 2010-2011" &= verbosity
 
-data (AccelStruct a b) => Context a b = Context
-  { options :: Options
-  , cameras :: [Camera] -- ^ List of cameras. Only the first is currently used.
-  , scene   :: a        -- ^ Scene Primitive
+data Context a b = Context
+  { _options :: Options
+  , _cameras :: [Camera] -- ^ List of cameras. Only the first is currently used.
+  , _scene   :: a        -- ^ Scene Primitive
   }
 
 avgColor :: [Vec3] -> Vec3
-avgColor xs = (foldl1' (&+) xs) 
-  &* (1 / ((fromInteger . toInteger) (length xs)))
+avgColor xs = foldl1' (&+) xs &* (1 / (fromInteger . toInteger) (length xs))
 
 toInt :: (Floating a, Ord a, RealFrac a, Integral b) => a -> b
 toInt x = truncate (((clamp x ** (1 / 2.2)) * 255) + 0.5)
@@ -174,3 +185,5 @@ clamp :: (Num a, Ord a) => a -> a
 clamp x | x < 0     = 0
         | x > 1     = 1
         | otherwise = x
+
+$(makeLenses [''Options, ''Context])

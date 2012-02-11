@@ -6,6 +6,7 @@ module Cologne.Shaders.Debug (
 
 import Control.Monad.ST
 import System.Random.MWC (Seed)
+import Data.Lens ((^$!))
 import Data.Word
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Vect (Vec3(Vec3), (&+), (&*), (&.), (&^), len, normalize)
@@ -16,6 +17,8 @@ import Graphics.Formats.Assimp (lookAt, position, horizontalFOV, aspect, up,
 
 import Cologne.Primitives hiding (intersect, Z)
 import Cologne.AssimpImport (ColorInfo)
+
+import Debug.Trace
 
 -- Just return the color we intersect multiplied by the cosine of the angle of
 -- intersection.
@@ -37,7 +40,7 @@ debug :: Context [Primitive ColorInfo] ColorInfo
        -> Seed
        -> Vec3
 debug (Context options cams scene) column row _ = 
-  radiance scene (ray options cams column row) 0
+  {-trace (show (width ^$! options, height ^$! options))-} radiance scene (ray options cams column row) 0
 
 --debug :: Context [Primitive ColorInfo] ColorInfo
 --      -> Array DIM3 Word8
@@ -62,8 +65,8 @@ debug (Context options cams scene) column row _ =
 ray :: Options -> [Camera] -> Int -> Int -> Ray
 ray options cams x y = Ray ((position cam) &+ ((dir x y) &* 140.0)) (normalize (dir x y))
   where
-    w = width options
-    h = height options
+    w = width  ^$! options
+    h = height ^$! options
     cam | length cams > 0 = head cams
         | otherwise       = Camera "" (Vec3 0 0 500) (Vec3 0 1 0) 
                                    (Vec3 0 0.1 (-1)) 0.5 1e-2 1e5 1
